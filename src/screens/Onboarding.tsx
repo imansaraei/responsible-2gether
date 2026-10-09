@@ -5,6 +5,8 @@ import { createHousehold, householdExists } from '../firebase/repo';
 
 type Step = 'choose' | 'create' | 'join';
 
+const OFFLINE = 'You need to be online to set up a household.';
+
 export function readJoinCode(hash: string): string | null {
   const m = /join=([a-z0-9-]+)/i.exec(hash);
   return m ? normalizeCode(m[1]) : null;
@@ -12,15 +14,18 @@ export function readJoinCode(hash: string): string | null {
 
 export function Onboarding({ onHousehold }: { onHousehold(code: string): void }) {
   const linked = readJoinCode(location.hash);
-  const [step, setStep] = useState<Step>(linked ? 'join' : 'choose');
+  const [step, setStepRaw] = useState<Step>(linked ? 'join' : 'choose');
   const [nameA, setNameA] = useState('');
   const [nameB, setNameB] = useState('');
   const [code, setCode] = useState(linked ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const setStep = (st: Step) => { setError(null); setStepRaw(st); };
+
   async function create(e: FormEvent) {
     e.preventDefault();
+    if (!navigator.onLine) return setError(OFFLINE);
     if (!nameA.trim() || !nameB.trim()) return setError('Please enter both names.');
     setBusy(true); setError(null);
     try {
@@ -34,6 +39,7 @@ export function Onboarding({ onHousehold }: { onHousehold(code: string): void })
 
   async function join(e: FormEvent) {
     e.preventDefault();
+    if (!navigator.onLine) return setError(OFFLINE);
     const c = normalizeCode(code);
     if (!isValidCode(c)) return setError('That doesn’t look like a household code (word-word-word-1234).');
     setBusy(true); setError(null);

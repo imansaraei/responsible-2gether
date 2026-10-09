@@ -1,5 +1,5 @@
 import {
-  collection, deleteDoc, doc, getDocFromServer, getDocsFromServer, getDoc, setDoc, updateDoc, writeBatch,
+  collection, deleteDoc, doc, getDocFromServer, getDocsFromServer, setDoc, updateDoc, writeBatch,
   type DocumentReference, type Firestore,
 } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
@@ -17,7 +17,7 @@ const newId = () => crypto.randomUUID();
 
 export async function householdExists(code: string): Promise<boolean> {
   await ensureSignedIn();
-  return (await getDoc(hh(getDb(), code))).exists();
+  return (await getDocFromServer(hh(getDb(), code))).exists();
 }
 
 export async function createHousehold(code: string, members: Members): Promise<void> {

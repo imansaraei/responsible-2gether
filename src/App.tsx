@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { isConfigured } from './firebase/config';
 import { useChores, useHouseholdDoc } from './firebase/hooks';
 import { loadDevice, saveDevice, type DeviceState } from './device';
@@ -28,8 +28,8 @@ function useCurrentWeekId(): string {
 
 export default function App() {
   const [device, setDevice] = useState<DeviceState>(loadDevice);
-  const updateDevice = (patch: Partial<DeviceState>) =>
-    setDevice((d) => { const next = { ...d, ...patch }; saveDevice(next); return next; });
+  const updateDevice = useCallback((patch: Partial<DeviceState>) =>
+    setDevice((d) => { const next = { ...d, ...patch }; saveDevice(next); return next; }), []);
 
   if (!isConfigured) return <SetupNeeded />;
   if (!device.code) return <Onboarding onHousehold={(code) => updateDevice({ code, me: null })} />;
@@ -44,7 +44,7 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
 
   const ctx = useMemo<HouseholdCtx | null>(
     () => (members && device.me ? { code, me: device.me, members, chores, currentWeekId, device, updateDevice } : null),
-    [code, members, chores, currentWeekId, device],
+    [code, members, chores, currentWeekId, device, updateDevice],
   );
 
   if (loading) return <main className="page narrow"><p className="muted">Loading…</p></main>;

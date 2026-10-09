@@ -13,12 +13,11 @@ export const TABS: { id: TabId; label: string; icon: () => ReactElement }[] = [
 
 export function TabBar({ active, onChange }: { active: TabId; onChange: (t: TabId) => void }) {
   return (
-    <nav className="tabbar" role="tablist" aria-label="Sections">
+    <nav className="tabbar" aria-label="Sections">
       {TABS.map(({ id, label, icon: Icon }) => (
         <button
           key={id}
-          role="tab"
-          aria-selected={active === id}
+          aria-current={active === id ? 'page' : undefined}
           className={`tab${id === 'dashboard' ? ' tab-center' : ''}`}
           onClick={() => onChange(id)}
         >
