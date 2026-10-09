@@ -62,3 +62,23 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
   display: grid; place-items: center; margin-top: -26px; box-shadow: 0 4px 14px rgb(0 0 0 / .18); }
 .tab-center:not([aria-current="page"]) .tab-icon { opacity: .85; }
 .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
+.small { font-size: .8rem; }
+.notice { background: var(--warn-bg); color: var(--warn-text); border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; font-size: .9rem; }
+.weeknav { display: flex; align-items: center; justify-content: space-between; text-align: center; margin-bottom: 8px; }
+.weeknav .btn { font-size: 1.6rem; padding: 4px 14px; }
+.donut { position: relative; width: min(260px, 72vw); margin: 0 auto; }
+.donut svg { width: 100%; height: auto; display: block; }
+.donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.donut-label strong { font-size: 1.6rem; }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.legend-head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.legend-head strong { margin-left: auto; }
+.legend ul { list-style: none; padding: 0; margin: 6px 0; font-size: .85rem; }
+.legend li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.legend li .muted { margin-left: auto; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; }
+.dot.small { width: 8px; height: 8px; }
+.helpbar-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.helpbar-track { height: 12px; border-radius: 6px; background: var(--slice-empty); overflow: hidden; }
+.helpbar-fill { height: 100%; border-radius: 6px; transition: width .3s; }
+.cards { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
