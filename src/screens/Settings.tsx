@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { useHousehold } from '../state/HouseholdContext';
 import { useSyncStatus } from '../firebase/hooks';
-import { exportHousehold, importHousehold, updateMembers } from '../firebase/repo';
+import { exportHousehold, importHousehold, renameMember } from '../firebase/repo';
 import { validateBackup } from '../domain/backup';
 import { exportReminderDue } from '../device';
 import { MEMBER_IDS, type MemberId } from '../domain/types';
@@ -51,7 +51,7 @@ export function Settings() {
     if (draft === undefined) return; // untouched: never overwrite a remote rename
     setDrafts(({ [m]: _discard, ...rest }) => rest);
     const n = draft.trim().slice(0, 30);
-    if (n && n !== members[m].name) void updateMembers(code, { ...members, [m]: { name: n } });
+    if (n && n !== members[m].name) void renameMember(code, m, n);
   };
 
   async function copyCode() {
@@ -113,7 +113,8 @@ export function Settings() {
     try { parsed = JSON.parse(await file.text()); } catch { return setMsg('That file isn’t valid JSON.'); }
     const r = validateBackup(parsed);
     if (!r.ok) return setMsg(r.error);
-    if (!confirm(`Replace ALL data in this household with the backup from ${new Date(r.backup.exportedAt).toLocaleString()}? This can’t be undone — export a backup of the current data first if you might need it.`)) return;
+    const foreign = r.backup.code !== code ? ` This backup is from a different household (${r.backup.code}).` : '';
+    if (!confirm(`Replace ALL data in this household with the backup from ${new Date(r.backup.exportedAt).toLocaleString()}? This can’t be undone — export a backup of the current data first if you might need it.${foreign}`)) return;
     setMsg('Importing…');
     try { await importHousehold(code, r.backup); setMsg('Backup restored.'); }
     catch { setMsg('Import failed. Are you online?'); }

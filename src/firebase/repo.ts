@@ -34,9 +34,10 @@ export async function createHousehold(code: string, members: Members): Promise<v
   await track(batch.commit());
 }
 
-export async function updateMembers(code: string, members: Members): Promise<void> {
+/** Dotted-path update so concurrent renames of the two members never overwrite each other. */
+export async function renameMember(code: string, m: MemberId, name: string): Promise<void> {
   await ensureSignedIn();
-  await track(updateDoc(hh(getDb(), code), { members }));
+  await track(updateDoc(hh(getDb(), code), { [`members.${m}.name`]: name }));
 }
 
 export async function addChore(code: string, input: { name: string; hours: number; assignee: MemberId }) {

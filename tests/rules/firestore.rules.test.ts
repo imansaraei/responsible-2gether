@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import {
   assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 const CODE = 'tidy-otter-maple-4821';
 const household = { members: { a: { name: 'Iman' }, b: { name: 'Sam' } }, createdAt: 1 };
@@ -63,4 +63,37 @@ test('feedback validation', async () => {
   await assertSucceeds(setDoc(h(authed(), 'weeks', '2026-W41', 'feedback', 'f1'), feedback));
   await assertFails(setDoc(h(authed(), 'weeks', '2026-W41', 'feedback', 'f2'), { ...feedback, to: 'a' }));
   await assertFails(setDoc(h(authed(), 'weeks', '2026-W41', 'feedback', 'f3'), { ...feedback, text: '' }));
+});
+
+const seed = (path: string[], data: Record<string, unknown>) =>
+  env.withSecurityRulesDisabled((c) => setDoc(doc(c.firestore(), 'households', CODE, ...path), data));
+
+test('a dotted member-name update passes', async () => {
+  await seed([], household);
+  await assertSucceeds(updateDoc(h(authed()), { 'members.b.name': 'Samira' }));
+  const snap = await getDoc(h(authed()));
+  expect(snap.data()!.members).toEqual({ a: { name: 'Iman' }, b: { name: 'Samira' } });
+  await assertFails(updateDoc(h(authed()), { 'members.b.name': '' }));
+});
+
+test('partial archivedAt and resolved updates pass', async () => {
+  await seed(['chores', 'c1'], chore);
+  await seed(['weeks', '2026-W41', 'feedback', 'f1'], feedback);
+  await assertSucceeds(updateDoc(h(authed(), 'chores', 'c1'), { archivedAt: 1234 }));
+  await assertSucceeds(updateDoc(h(authed(), 'weeks', '2026-W41', 'feedback', 'f1'), { resolved: true }));
+});
+
+test('an import-shaped batch (sets plus a stale delete) passes for a signed-in device', async () => {
+  await seed(['chores', 'stale'], chore);
+  const db = authed();
+  const batch = writeBatch(db);
+  batch.set(h(db), household);
+  batch.set(h(db, 'chores', 'c1'), chore);
+  batch.set(h(db, 'weeks', '2026-W41'), { weekId: '2026-W41' });
+  batch.set(h(db, 'weeks', '2026-W41', 'completions', 'c1'), completion);
+  batch.set(h(db, 'weeks', '2026-W41', 'feedback', 'f1'), feedback);
+  batch.delete(h(db, 'chores', 'stale'));
+  await assertSucceeds(batch.commit());
+  expect((await getDoc(h(authed(), 'chores', 'stale'))).exists()).toBe(false);
+  expect((await getDoc(h(authed(), 'chores', 'c1'))).exists()).toBe(true);
 });

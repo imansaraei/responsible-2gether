@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { HouseholdContext, type HouseholdCtx } from '../state/HouseholdContext';
 import { Settings, backupFileName, saveBackupFile } from './Settings';
 
-const updateMembers = vi.fn(), importHousehold = vi.fn(), exportHousehold = vi.fn();
+const renameMember = vi.fn(), importHousehold = vi.fn(), exportHousehold = vi.fn();
 vi.mock('../firebase/repo', () => ({
-  updateMembers: (...a: unknown[]) => updateMembers(...a),
+  renameMember: (...a: unknown[]) => renameMember(...a),
   exportHousehold: (...a: unknown[]) => exportHousehold(...a),
   importHousehold: (...a: unknown[]) => importHousehold(...a),
 }));
@@ -60,7 +60,7 @@ test('renaming a member saves on blur', async () => {
   await userEvent.clear(input);
   await userEvent.type(input, 'Samira');
   await userEvent.tab();
-  expect(updateMembers).toHaveBeenCalledWith('tidy-otter-maple-4821', { a: { name: 'Iman' }, b: { name: 'Samira' } });
+  expect(renameMember).toHaveBeenCalledWith('tidy-otter-maple-4821', 'b', 'Samira');
 });
 
 test('a remote rename is shown and not overwritten by a plain focus/blur', async () => {
@@ -70,7 +70,7 @@ test('a remote rename is shown and not overwritten by a plain focus/blur', async
   expect(input).toHaveValue('Samira');
   await userEvent.click(input);
   await userEvent.tab();
-  expect(updateMembers).not.toHaveBeenCalled();
+  expect(renameMember).not.toHaveBeenCalled();
   expect(input).toHaveValue('Samira');
 });
 
@@ -78,7 +78,7 @@ test('pressing Enter commits the rename', async () => {
   renderIt();
   const input = screen.getByLabelText('Person 2 name');
   await userEvent.type(input, 'x{Enter}');
-  expect(updateMembers).toHaveBeenCalledWith('tidy-otter-maple-4821', { a: { name: 'Iman' }, b: { name: 'Samx' } });
+  expect(renameMember).toHaveBeenCalledWith('tidy-otter-maple-4821', 'b', 'Samx');
 });
 
 test('rejects an invalid import file', async () => {
@@ -199,4 +199,21 @@ test('Copy code shows the code when the clipboard is unavailable', async () => {
   renderIt();
   await userEvent.click(screen.getByRole('button', { name: 'Copy code' }));
   expect(await screen.findByText(/Couldn’t copy — your code is: tidy-otter-maple-4821/)).toBeInTheDocument();
+});
+
+test('import confirm warns when the backup is from a different household', async () => {
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  renderIt();
+  const other = { ...backup, code: 'calm-fox-pine-1234' };
+  await userEvent.upload(screen.getByLabelText(/Import backup/), new File([JSON.stringify(other)], 'o.json', { type: 'application/json' }));
+  await vi.waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+  expect(confirmSpy.mock.calls[0][0]).toContain('This backup is from a different household (calm-fox-pine-1234).');
+});
+
+test('import confirm has no different-household warning for the same code', async () => {
+  const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+  renderIt();
+  await userEvent.upload(screen.getByLabelText(/Import backup/), new File([JSON.stringify(backup)], 'o.json', { type: 'application/json' }));
+  await vi.waitFor(() => expect(confirmSpy).toHaveBeenCalled());
+  expect(confirmSpy.mock.calls[0][0]).not.toContain('different household');
 });
