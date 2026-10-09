@@ -10,9 +10,10 @@ export const EMPTY_DEVICE: DeviceState = { code: null, me: null, lastExportAt: n
 const KEY = 'r2g.device';
 const DAY = 86_400_000;
 
-export function loadDevice(storage: Storage = localStorage): DeviceState {
+export function loadDevice(storage?: Storage): DeviceState {
   try {
-    const raw = storage.getItem(KEY);
+    const s = storage ?? localStorage;
+    const raw = s.getItem(KEY);
     if (!raw) return EMPTY_DEVICE;
     const p = JSON.parse(raw);
     return {
@@ -25,9 +26,10 @@ export function loadDevice(storage: Storage = localStorage): DeviceState {
   }
 }
 
-export function saveDevice(s: DeviceState, storage: Storage = localStorage): void {
+export function saveDevice(s: DeviceState, storage?: Storage): void {
   try {
-    storage.setItem(KEY, JSON.stringify(s));
+    const st = storage ?? localStorage;
+    st.setItem(KEY, JSON.stringify(s));
   } catch {
     // Storage blocked (private mode); identity lasts for this session only.
   }

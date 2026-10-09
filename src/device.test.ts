@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { loadDevice, saveDevice, exportReminderDue, EMPTY_DEVICE } from './device';
 
 const memoryStorage = (): Storage => {
@@ -32,6 +33,18 @@ test('throwing storage gives empty device and save does not throw', () => {
   const s = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); } } as unknown as Storage;
   expect(loadDevice(s)).toEqual(EMPTY_DEVICE);
   expect(() => saveDevice(EMPTY_DEVICE, s)).not.toThrow();
+});
+
+test('blocked localStorage (SecurityError on access) gives empty device and save does not throw', () => {
+  const mock = vi.spyOn(window, 'localStorage', 'get').mockImplementation(() => {
+    throw new Error('SecurityError');
+  });
+  try {
+    expect(loadDevice()).toEqual(EMPTY_DEVICE);
+    expect(() => saveDevice(EMPTY_DEVICE)).not.toThrow();
+  } finally {
+    mock.mockRestore();
+  }
 });
 
 describe('exportReminderDue', () => {
