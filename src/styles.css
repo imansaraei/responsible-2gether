@@ -110,3 +110,11 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .chore-row input { padding: 8px; min-width: 0; }
 .chore-name { border-color: transparent; background: none; }
 .btn.assignee { padding: 8px 10px; min-height: 44px; font-size: .85rem; border-width: 2px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); padding: 2px 6px; border-radius: 6px; user-select: all; }
+.sync { font-size: .9rem; }
+.sync-synced { color: hsl(174 60% 40%); }
+.sync-saving { color: var(--muted); }
+.sync-offline { color: var(--warn-text); }
+.btn.file { display: flex; align-items: center; min-height: 44px; flex-direction: row; justify-content: center; color: var(--text); font-size: 1rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.card .btn { min-height: 44px; }
