@@ -102,3 +102,11 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .given.minus .given-kind { color: hsl(12 80% 55%); }
 .given-text { flex: 1; }
 .btn.small { padding: 4px 8px; min-width: 44px; min-height: 44px; }
+
+.totals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.total { display: flex; align-items: center; gap: 6px; padding: 10px 12px; }
+.total strong { margin-left: auto; }
+.chore-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px auto 44px; gap: 8px; align-items: center; padding: 8px; }
+.chore-row input { padding: 8px; min-width: 0; }
+.chore-name { border-color: transparent; background: none; }
+.btn.assignee { padding: 8px 10px; min-height: 44px; font-size: .85rem; border-width: 2px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
