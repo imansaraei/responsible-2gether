@@ -17,9 +17,9 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
   return [r + m, g + m, b + m];
 }
 
-// Calculate relative luminance
+// Calculate relative luminance (WCAG 2.x)
 function relativeLuminance(r: number, g: number, b: number): number {
-  const lin = (c: number) => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const lin = (c: number) => c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 }
 
@@ -42,7 +42,7 @@ function checkContrast(hslString: string, bgLuminance: number): number {
 
 // Luminance values for test backgrounds
 const WHITE_LUM = 1.0; // #ffffff
-const DARK_LUM = relativeLuminance(0.125, 0.122, 0.110); // #201f1c ≈ 0.020
+const DARK_LUM = relativeLuminance(32 / 255, 31 / 255, 28 / 255); // #201f1c
 
 test('slice colors meet 3:1 contrast ratio against light and dark backgrounds', () => {
   const members = ['a', 'b'] as const;
@@ -54,7 +54,7 @@ test('slice colors meet 3:1 contrast ratio against light and dark backgrounds', 
         const color = sliceColor(member, i, n);
         const lightContrast = checkContrast(color, WHITE_LUM);
         const darkContrast = checkContrast(color, DARK_LUM);
-        expect(Math.min(lightContrast, darkContrast)).toBeGreaterThanOrEqual(2.25);
+        expect(Math.min(lightContrast, darkContrast)).toBeGreaterThanOrEqual(3);
       }
     }
   }
@@ -65,6 +65,6 @@ test('memberColor meets 3:1 contrast ratio against light and dark backgrounds', 
     const color = memberColor(member);
     const lightContrast = checkContrast(color, WHITE_LUM);
     const darkContrast = checkContrast(color, DARK_LUM);
-    expect(Math.min(lightContrast, darkContrast)).toBeGreaterThanOrEqual(2.25);
+    expect(Math.min(lightContrast, darkContrast)).toBeGreaterThanOrEqual(3);
   }
 });
