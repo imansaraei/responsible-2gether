@@ -77,7 +77,7 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .legend-head strong { margin-left: auto; }
 .legend ul { list-style: none; padding: 0; margin: 6px 0; font-size: .85rem; }
 .legend li { display: flex; align-items: center; gap: 6px; padding: 2px 0; overflow-wrap: anywhere; min-width: 0; }
-.legend li .muted { margin-left: auto; }
+.legend li .muted { margin-left: auto; white-space: nowrap; overflow-wrap: normal; }
 .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; }
 .dot.small { width: 8px; height: 8px; }
 .helpbar-head { display: flex; justify-content: space-between; margin-bottom: 4px; }
