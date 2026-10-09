@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
 import { isConfigured } from './firebase/config';
-import { useChores, useHouseholdDoc } from './firebase/hooks';
+import { useChores, useHouseholdDoc, useSyncStatus } from './firebase/hooks';
 import { loadDevice, saveDevice, type DeviceState } from './device';
 import { weekIdOf } from './domain/week';
 import { HouseholdContext, type HouseholdCtx } from './state/HouseholdContext';
+import { OfflinePill } from './components/OfflinePill';
 import { TabBar, type TabId } from './components/TabBar';
 import { SetupNeeded } from './screens/SetupNeeded';
 import { Onboarding, WhoAreYou } from './screens/Onboarding';
@@ -41,6 +42,7 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   const chores = useChores(code);
   const currentWeekId = useCurrentWeekId();
   const [tab, setTab] = useState<TabId>('dashboard');
+  const offline = useSyncStatus(code) === 'offline';
 
   const ctx = useMemo<HouseholdCtx | null>(
     () => (members && device.me ? { code, me: device.me, members, chores, currentWeekId, device, updateDevice } : null),
@@ -62,8 +64,9 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   const Screen = SCREENS[tab];
   return (
     <HouseholdContext.Provider value={ctx}>
-      <div className="app">
+      <div className={`app${offline ? ' has-pill' : ''}`}>
         <Screen />
+        <OfflinePill code={code} />
         <TabBar active={tab} onChange={setTab} />
       </div>
     </HouseholdContext.Provider>
