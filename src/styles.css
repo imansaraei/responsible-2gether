@@ -91,3 +91,14 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .check-row label { flex-direction: row; align-items: center; gap: 10px; min-height: 44px; color: var(--text); font-size: 1rem; }
 .check-row input { width: 22px; height: 22px; accent-color: var(--accent); }
 .check-row.done span { text-decoration: line-through; color: var(--muted); }
+.kind-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kind-toggle button { border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 10px; min-height: 44px; font-weight: 600; cursor: pointer; }
+.kind-toggle button.on.plus { background: hsl(174 60% 30%); border-color: transparent; color: #fff; }
+.kind-toggle button.on.minus { background: hsl(12 80% 44%); border-color: transparent; color: #fff; }
+.warning { background: var(--warn-bg); color: var(--warn-text); border-radius: var(--radius); padding: 14px 16px; margin-top: 12px; font-size: .92rem; }
+.given { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.given-kind { font-weight: 800; }
+.given.plus .given-kind { color: hsl(174 60% 40%); }
+.given.minus .given-kind { color: hsl(12 80% 55%); }
+.given-text { flex: 1; }
+.btn.small { padding: 4px 8px; min-width: 44px; min-height: 44px; }
