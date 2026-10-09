@@ -15,20 +15,21 @@ type R = { ok: true; backup: Backup } | { ok: false; error: string };
 
 const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
 const isStr = (x: unknown, max: number) => typeof x === 'string' && x.length > 0 && x.length <= max;
+const isId = (x: unknown) => isStr(x, 100) && !(x as string).includes('/');
 const isNum = (x: unknown) => typeof x === 'number' && Number.isFinite(x);
 const isMember = (x: unknown) => x === 'a' || x === 'b';
 const isHours = (x: unknown) => isNum(x) && (x as number) >= 0.25 && (x as number) <= 40;
 
 const validChore = (c: unknown) =>
-  isObj(c) && isStr(c.id, 100) && isStr(c.name, 60) && isHours(c.hours) && isMember(c.assignee) &&
+  isObj(c) && isId(c.id) && isStr(c.name, 60) && isHours(c.hours) && isMember(c.assignee) &&
   isNum(c.createdAt) && (c.archivedAt === null || isNum(c.archivedAt));
 
 const validCompletion = (c: unknown) =>
-  isObj(c) && isStr(c.choreId, 100) && PERCENTS.includes(c.percent as never) && isStr(c.name, 60) &&
+  isObj(c) && isId(c.choreId) && PERCENTS.includes(c.percent as never) && isStr(c.name, 60) &&
   isHours(c.hours) && isMember(c.assignee) && isNum(c.updatedAt);
 
 const validFeedback = (f: unknown) =>
-  isObj(f) && isStr(f.id, 100) && isMember(f.from) && isMember(f.to) && f.from !== f.to &&
+  isObj(f) && isId(f.id) && isMember(f.from) && isMember(f.to) && f.from !== f.to &&
   (f.kind === 'plus' || f.kind === 'minus') && isStr(f.text, 280) && isNum(f.createdAt) &&
   typeof f.resolved === 'boolean';
 

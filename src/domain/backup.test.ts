@@ -26,6 +26,9 @@ test.each([
   ['bad chore assignee', { ...good, chores: [{ ...good.chores[0], assignee: 'c' }] }],
   ['bad week id', { ...good, weeks: { 'week-41': good.weeks['2026-W41'] } }],
   ['bad percent', { ...good, weeks: { '2026-W41': { ...good.weeks['2026-W41'], completions: [{ ...good.weeks['2026-W41'].completions[0], percent: 30 }] } } }],
+  ['slash in chore id', { ...good, chores: [{ ...good.chores[0], id: 'a/b' }] }],
+  ['slash in completion choreId', { ...good, weeks: { '2026-W41': { ...good.weeks['2026-W41'], completions: [{ ...good.weeks['2026-W41'].completions[0], choreId: 'a/b' }] } } }],
+  ['slash in feedback id', { ...good, weeks: { '2026-W41': { ...good.weeks['2026-W41'], feedback: [{ ...good.weeks['2026-W41'].feedback[0], id: 'a/b' }] } } }],
   ['bad feedback kind', { ...good, weeks: { '2026-W41': { ...good.weeks['2026-W41'], feedback: [{ ...good.weeks['2026-W41'].feedback[0], kind: 'meh' }] } } }],
 ])('rejects %s', (_label, input) => {
   const r = validateBackup(input);

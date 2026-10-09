@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
+import { onPendingChange, pendingWrites } from './pending';
 import { toChore, toCompletion, toFeedback } from './repo';
 import type { Chore, Completion, Feedback, Members } from '../domain/types';
 
@@ -22,6 +23,7 @@ export function useHouseholdDoc(code: string) {
     if (!ready) return;
     return onSnapshot(
       doc(getDb(), 'households', code),
+      { includeMetadataChanges: true },
       (s) => setState({ members: s.exists() ? (s.data().members as Members) : null, loading: s.metadata.fromCache && !s.exists() }),
       () => setState({ members: null, loading: false }),
     );
@@ -66,10 +68,9 @@ export function useWeek(code: string, weekId: string) {
 
 export type SyncStatus = 'synced' | 'saving' | 'offline';
 
-export function useSyncStatus(code: string): SyncStatus {
-  const ready = useSignedIn();
+export function useSyncStatus(_code: string): SyncStatus {
   const [online, setOnline] = useState(() => navigator.onLine);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState(() => pendingWrites() > 0);
   useEffect(() => {
     const on = () => setOnline(true);
     const off = () => setOnline(false);
@@ -78,11 +79,9 @@ export function useSyncStatus(code: string): SyncStatus {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, []);
   useEffect(() => {
-    if (!ready) return;
-    // Any pending write in the household tree shows up on at least one listened query; chores is the busiest.
-    return onSnapshot(collection(getDb(), 'households', code, 'chores'), { includeMetadataChanges: true },
-      (s) => setPending(s.metadata.hasPendingWrites));
-  }, [ready, code]);
+    setPending(pendingWrites() > 0);
+    return onPendingChange(() => setPending(pendingWrites() > 0));
+  }, []);
   if (!online) return 'offline';
   return pending ? 'saving' : 'synced';
 }
