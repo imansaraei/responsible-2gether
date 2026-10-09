@@ -38,6 +38,7 @@ export function Dashboard() {
 
       <Donut
         slices={slices}
+        ariaLabel={`Chores done, ${formatWeekRange(weekId)}: ${members[order[0]].name} ${pct[order[0]]}%, ${members[order[1]].name} ${pct[order[1]]}%, ${h(hours.done)} of ${h(hours.total)}`}
         label={hours.done === 0
           ? <span className="muted">Nothing done yet</span>
           : <><strong>{h(hours.done)}</strong><span className="muted small">of {h(hours.total)}</span></>}

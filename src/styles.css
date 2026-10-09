@@ -70,11 +70,11 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .donut svg { width: 100%; height: auto; display: block; }
 .donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .donut-label strong { font-size: 1.6rem; }
-.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+.legend { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
 .legend-head { display: flex; align-items: center; gap: 6px; font-weight: 600; }
 .legend-head strong { margin-left: auto; }
 .legend ul { list-style: none; padding: 0; margin: 6px 0; font-size: .85rem; }
-.legend li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.legend li { display: flex; align-items: center; gap: 6px; padding: 2px 0; overflow-wrap: anywhere; min-width: 0; }
 .legend li .muted { margin-left: auto; }
 .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex: none; }
 .dot.small { width: 8px; height: 8px; }
