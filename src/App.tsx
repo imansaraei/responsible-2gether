@@ -38,7 +38,8 @@ export default function App() {
 }
 
 function Household({ code, device, updateDevice }: { code: string; device: DeviceState; updateDevice(p: Partial<DeviceState>): void }) {
-  const { members, loading } = useHouseholdDoc(code);
+  const [attempt, setAttempt] = useState(0);
+  const { members, loading, error } = useHouseholdDoc(code, attempt);
   const chores = useChores(code);
   const currentWeekId = useCurrentWeekId();
   const [tab, setTab] = useState<TabId>('dashboard');
@@ -50,6 +51,15 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   );
 
   if (loading) return <main className="page narrow"><p className="muted">Loading…</p></main>;
+  if (error) {
+    return (
+      <main className="page narrow">
+        <h1>Can’t reach your household</h1>
+        <p className="muted">Couldn’t load your household — check your connection.</p>
+        <button className="btn primary" onClick={() => setAttempt((n) => n + 1)}>Retry</button>
+      </main>
+    );
+  }
   if (!members) {
     return (
       <main className="page narrow">
