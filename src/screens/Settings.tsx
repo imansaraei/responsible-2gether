@@ -54,6 +54,11 @@ export function Settings() {
     if (n && n !== members[m].name) void updateMembers(code, { ...members, [m]: { name: n } });
   };
 
+  async function copyCode() {
+    try { await navigator.clipboard.writeText(code); setMsg('Code copied.'); }
+    catch { setMsg(`Couldn’t copy — your code is: ${code}`); }
+  }
+
   async function share() {
     const text = `Join our Responsible 2gether household: ${link}`;
     try {
@@ -140,6 +145,7 @@ export function Settings() {
       <h2>Household</h2>
       <div className="card stack">
         <div>Code: <code className="code">{code}</code></div>
+        <button className="btn" onClick={copyCode}>Copy code</button>
         <button className="btn" onClick={share}>Share join link</button>
         <div className={`sync sync-${sync}`}>{SYNC_LABEL[sync]}</div>
       </div>

@@ -18,6 +18,7 @@ afterEach(() => {
   vi.useRealTimers();
   Reflect.deleteProperty(navigator, 'canShare');
   Reflect.deleteProperty(navigator, 'share');
+  Reflect.deleteProperty(navigator, 'clipboard');
 });
 
 const backup = {
@@ -182,4 +183,20 @@ test('a failed export logs the error', async () => {
   await userEvent.click(screen.getByRole('button', { name: /Export backup/ }));
   expect(await screen.findByText('Export failed.')).toBeInTheDocument();
   expect(err).toHaveBeenCalled();
+});
+
+test('Copy code puts the code on the clipboard', async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  setNav({ clipboard: { writeText } });
+  renderIt();
+  await userEvent.click(screen.getByRole('button', { name: 'Copy code' }));
+  expect(writeText).toHaveBeenCalledWith('tidy-otter-maple-4821');
+  expect(await screen.findByText('Code copied.')).toBeInTheDocument();
+});
+
+test('Copy code shows the code when the clipboard is unavailable', async () => {
+  setNav({ clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) } });
+  renderIt();
+  await userEvent.click(screen.getByRole('button', { name: 'Copy code' }));
+  expect(await screen.findByText(/Couldn’t copy — your code is: tidy-otter-maple-4821/)).toBeInTheDocument();
 });

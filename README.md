@@ -12,9 +12,10 @@ Design: `docs/superpowers/specs/2026-10-09-responsible-2gether-design.md`
    - Create a project (Spark/free plan; Google Analytics off).
    - Build → Authentication → Sign-in method → enable **Anonymous**.
    - Build → Firestore Database → Create database (production mode, region near you, e.g. `eur3`).
-   - Project settings → Your apps → add a **Web** app → copy the config object into `src/firebase/config.ts` (replace the `REPLACE_ME` values).
-   - Deploy the security rules:
+   - Project settings → Your apps → add a **Web** app → copy the config object into `src/firebase/config.ts` (replace the `REPLACE_ME` values), then commit and push the edited `config.ts`.
+   - Deploy the security rules (run `npm install` first so `npx firebase` is available):
      ```bash
+     npm install
      npx firebase login
      npx firebase deploy --only firestore:rules --project <your-project-id>
      ```
@@ -24,8 +25,9 @@ Design: `docs/superpowers/specs/2026-10-09-responsible-2gether-design.md`
    - Firebase console → Authentication → Settings → Authorised domains → add `<your-user>.github.io`.
 3. **Phones**
    - Open `https://<your-user>.github.io/responsible-2gether/`.
-   - iPhone: Share → *Add to Home Screen*. Android: menu → *Install app*.
-   - Phone 1: *Create our household*. Settings → *Share join link* → send to phone 2.
+   - Phone 1 (any phone): *Create our household*. Settings → note the household code (use *Copy code*) or *Share join link*.
+   - Phone 2, **iPhone**: do the install FIRST. Share → *Add to Home Screen*, then open the installed app (not Safari), choose *Join with a code* and paste the code. Home-screen apps on iOS don't share storage with Safari and drop the `#join` part of a link, so a join link opened in Safari won't carry over to the installed app.
+   - Phone 2, **Android**: menu → *Install app*, then open the join link or use *Join with a code*.
 
 ## How scoring works
 
