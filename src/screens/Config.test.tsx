@@ -97,7 +97,7 @@ test('blurring an emptied name reverts and does not write', async () => {
 
 test('hours are clamped on blur', async () => {
   renderIt();
-  const input = screen.getByLabelText('Hours per week for chore 2');
+  const input = screen.getByLabelText('Hours per week for Trash');
   await userEvent.clear(input);
   await userEvent.type(input, '0.3');
   await userEvent.tab();
@@ -118,7 +118,7 @@ test.each([['1,5', 1.5], [' 2 ', 2], ['', null], ['   ', null], ['abc', null], [
 
 test('blurring an emptied hours field reverts and does not write', async () => {
   renderIt();
-  const input = screen.getByLabelText('Hours per week for chore 2');
+  const input = screen.getByLabelText('Hours per week for Trash');
   await userEvent.clear(input);
   await userEvent.tab();
   expect(updateChore).not.toHaveBeenCalled();
@@ -127,7 +127,7 @@ test('blurring an emptied hours field reverts and does not write', async () => {
 
 test('a comma decimal is accepted in a row', async () => {
   renderIt();
-  const input = screen.getByLabelText('Hours per week for chore 2');
+  const input = screen.getByLabelText('Hours per week for Trash');
   await userEvent.clear(input);
   await userEvent.type(input, '1,5');
   await userEvent.tab();
@@ -142,4 +142,20 @@ test('add form with empty hours does not add, keeps the form and explains', asyn
   expect(addChore).not.toHaveBeenCalled();
   expect(screen.getByText('Enter hours, e.g. 1.5')).toBeInTheDocument();
   expect(screen.getByLabelText('New chore')).toHaveValue('Vacuum');
+});
+
+test('row inputs are labelled with the chore name', () => {
+  renderIt();
+  expect(screen.getByLabelText('Name of Cooking')).toHaveValue('Cooking');
+  expect(screen.getByLabelText('Hours per week for Cooking')).toHaveValue('7');
+});
+
+test('row labels fall back to the position when the name is empty', () => {
+  renderIt();
+  rerenderEmpty();
+  function rerenderEmpty() {
+    render(wrap({ ...ctx, chores: [{ ...ctx.chores[0], name: '' }] }));
+  }
+  expect(screen.getByLabelText('Name of chore 1')).toBeInTheDocument();
+  expect(screen.getByLabelText('Hours per week for chore 1')).toBeInTheDocument();
 });

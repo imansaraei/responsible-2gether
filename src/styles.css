@@ -108,10 +108,15 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .totals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
 .total { display: flex; align-items: center; gap: 6px; padding: 10px 12px; }
 .total strong { margin-left: auto; }
-.chore-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px auto 44px; gap: 8px; align-items: center; padding: 8px; }
-.chore-row input { padding: 8px; min-width: 0; }
+.chore-row { display: grid; grid-template-columns: 88px minmax(0, 1fr) 44px; grid-template-areas: "name name name" "hours assignee remove";
+  gap: 8px; align-items: center; padding: 8px; }
+.chore-row input { padding: 8px; min-width: 0; min-height: 44px; }
+.chore-row .chore-name { grid-area: name; width: 100%; }
+.chore-row .chore-hours { grid-area: hours; }
+.chore-row .assignee { grid-area: assignee; }
+.chore-row .ghost { grid-area: remove; }
 .chore-name { border-color: transparent; background: none; }
-.btn.assignee { padding: 8px 10px; min-height: 44px; font-size: .85rem; border-width: 2px; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.assignee { padding: 8px 10px; min-height: 44px; font-size: .85rem; border-width: 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); padding: 2px 6px; border-radius: 6px; user-select: all; }
 .sync { font-size: .9rem; }
 .sync-synced { color: var(--accent); }

@@ -48,8 +48,8 @@ function ChoreRow({ chore, index }: { chore: Chore; index: number }) {
 
   return (
     <li className="card chore-row">
-      <input className="chore-name" aria-label={`Name of chore ${index + 1}`} value={name} maxLength={60} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} onBlur={commitName} onKeyDown={blurOnEnter} />
-      <input className="chore-hours" aria-label={`Hours per week for chore ${index + 1}`} type="text" inputMode="decimal"
+      <input className="chore-name" aria-label={chore.name ? `Name of ${chore.name}` : `Name of chore ${index + 1}`} value={name} maxLength={60} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} onBlur={commitName} onKeyDown={blurOnEnter} />
+      <input className="chore-hours" aria-label={chore.name ? `Hours per week for ${chore.name}` : `Hours per week for chore ${index + 1}`} type="text" inputMode="decimal"
         value={hours} onChange={(e) => { setHours(e.target.value); setHoursDirty(true); }} onBlur={commitHours} onKeyDown={blurOnEnter} />
       <button className="btn assignee" aria-label={`Assigned to ${members[chore.assignee].name}, tap to reassign`} style={{ borderColor: memberColor(chore.assignee) }}
         onClick={() => void updateChore(code, chore.id, { assignee: other(chore.assignee) })}>
