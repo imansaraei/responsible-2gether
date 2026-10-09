@@ -36,7 +36,7 @@ other day to day. Two phones, one shared household, no accounts.
 - Members are always exactly two, with fixed ids `a` and `b`, each with a
   display name and a colour family (`a` = teal family, `b` = coral family).
 - **Create household** (first device): enter both names → app generates a
-  household code: three words from a built-in 256-word list plus four digits,
+  household code: three words from a built-in 64-word list plus four digits,
   e.g. `tidy-otter-maple-4821`. The household doc and the starter chore list
   are written.
 - **Join household** (second device): enter the code, or open the share link
@@ -54,26 +54,29 @@ other day to day. Two phones, one shared household, no accounts.
 ```
 households/{code}
   members: { a: {name}, b: {name} }
-  createdAt: timestamp
+  createdAt: number                     // all timestamps are epoch ms
 
 households/{code}/chores/{choreId}
   name: string (1–60)
   hours: number (0.25–40, step 0.25)   // weekly time
   assignee: 'a' | 'b'
-  createdAt: timestamp
-  archivedAt: timestamp | null          // "delete" = archive
+  createdAt: number
+  archivedAt: number | null          // "delete" = archive
+
+households/{code}/weeks/{weekId}
+  weekId: string                        // marker doc so weeks can be listed for export
 
 households/{code}/weeks/{weekId}/completions/{choreId}
   percent: 0 | 25 | 50 | 75 | 100
   name, hours, assignee                 // snapshot at time of rating
-  updatedAt: timestamp
+  updatedAt: number
 
 households/{code}/weeks/{weekId}/feedback/{feedbackId}
   from: 'a' | 'b'
   to: 'a' | 'b'                         // always the other member
   kind: 'plus' | 'minus'
   text: string (1–280)
-  createdAt: timestamp
+  createdAt: number
   resolved: boolean                     // meaningful for 'minus' only
 ```
 
