@@ -31,3 +31,20 @@ test('shades stay within the member hue and get lighter', () => {
   const light = (c: string) => Number(/ (\d+)%\)$/.exec(c)![1]);
   expect(light(sliceColor('a', 2, 3))).toBeGreaterThan(light(sliceColor('a', 0, 3)));
 });
+
+test('each arc dash plus gap equals the circumference (no seam)', () => {
+  const { container } = render(
+    <Donut ariaLabel="test" label="x" slices={[
+      { key: 'a1', label: 'Cooking', value: 3, member: 'a', shadeIndex: 0, shadeCount: 1 },
+      { key: 'b1', label: 'Trash', value: 2, member: 'b', shadeIndex: 0, shadeCount: 1 },
+      { key: 'notdone', label: 'Not done yet', value: 1, member: null, shadeIndex: 0, shadeCount: 1 },
+    ]} />,
+  );
+  const C = 2 * Math.PI * ((240 - 38) / 2);
+  const arcs = [...container.querySelectorAll('circle[data-slice]')];
+  expect(arcs).toHaveLength(3);
+  for (const a of arcs) {
+    const [dash, gap] = a.getAttribute('stroke-dasharray')!.split(' ').map(Number);
+    expect(dash + gap).toBeCloseTo(C, 6);
+  }
+});

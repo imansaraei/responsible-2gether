@@ -23,7 +23,7 @@ export function Donut({ slices, label, ariaLabel }: { slices: DonutSlice[]; labe
                 cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none"
                 stroke={sliceColor(s.member, s.shadeIndex, s.shadeCount)}
                 strokeWidth={STROKE}
-                strokeDasharray={`${dashLen} ${C - len}`}
+                strokeDasharray={`${dashLen} ${C - dashLen}`}
                 strokeDashoffset={-offset}
               >
                 <title>{`${s.label} — ${fmt(s.value)}`}</title>
