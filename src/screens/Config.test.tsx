@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HouseholdContext, type HouseholdCtx } from '../state/HouseholdContext';
-import { Config, clampHours } from './Config';
+import { Config, clampHours, parseHours } from './Config';
 
 const addChore = vi.fn(), updateChore = vi.fn(), archiveChore = vi.fn();
 vi.mock('../firebase/repo', () => ({
@@ -110,4 +110,36 @@ test('declined confirm does not archive', async () => {
   const row = screen.getByDisplayValue('Trash').closest('li')!;
   await userEvent.click(within(row).getByRole('button', { name: /Remove/ }));
   expect(archiveChore).not.toHaveBeenCalled();
+});
+
+test.each([['1,5', 1.5], [' 2 ', 2], ['', null], ['   ', null], ['abc', null], ['0.3', 0.25]])('parseHours(%j) = %s', (i, o) => {
+  expect(parseHours(i)).toBe(o);
+});
+
+test('blurring an emptied hours field reverts and does not write', async () => {
+  renderIt();
+  const input = screen.getByLabelText('Hours per week for chore 2');
+  await userEvent.clear(input);
+  await userEvent.tab();
+  expect(updateChore).not.toHaveBeenCalled();
+  expect(input).toHaveValue('0.5');
+});
+
+test('a comma decimal is accepted in a row', async () => {
+  renderIt();
+  const input = screen.getByLabelText('Hours per week for chore 2');
+  await userEvent.clear(input);
+  await userEvent.type(input, '1,5');
+  await userEvent.tab();
+  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2', { hours: 1.5 });
+});
+
+test('add form with empty hours does not add, keeps the form and explains', async () => {
+  renderIt();
+  await userEvent.type(screen.getByLabelText('New chore'), 'Vacuum');
+  await userEvent.clear(screen.getByLabelText('Hours per week'));
+  await userEvent.click(screen.getByRole('button', { name: 'Add chore' }));
+  expect(addChore).not.toHaveBeenCalled();
+  expect(screen.getByText('Enter hours, e.g. 1.5')).toBeInTheDocument();
+  expect(screen.getByLabelText('New chore')).toHaveValue('Vacuum');
 });

@@ -9,6 +9,13 @@ export function clampHours(n: number): number {
   return Math.min(40, Math.max(0.25, Math.round(n * 4) / 4));
 }
 
+export function parseHours(s: string): number | null {
+  const t = s.trim().replace(',', '.');
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isNaN(n) ? null : clampHours(n);
+}
+
 const fmt = (n: number) => `${Math.round(n * 100) / 100} h`;
 
 const blurOnEnter = (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') e.currentTarget.blur(); };
@@ -33,7 +40,8 @@ function ChoreRow({ chore, index }: { chore: Chore; index: number }) {
   const commitHours = () => {
     if (!hoursDirty) return;
     setHoursDirty(false);
-    const h = clampHours(parseFloat(hours));
+    const h = parseHours(hours);
+    if (h === null) return setHours(String(chore.hours));
     setHours(String(h));
     if (h !== chore.hours) void updateChore(code, chore.id, { hours: h });
   };
@@ -41,7 +49,7 @@ function ChoreRow({ chore, index }: { chore: Chore; index: number }) {
   return (
     <li className="card chore-row">
       <input className="chore-name" aria-label={`Name of chore ${index + 1}`} value={name} maxLength={60} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} onBlur={commitName} onKeyDown={blurOnEnter} />
-      <input className="chore-hours" aria-label={`Hours per week for chore ${index + 1}`} type="number" inputMode="decimal" step={0.25} min={0.25} max={40}
+      <input className="chore-hours" aria-label={`Hours per week for chore ${index + 1}`} type="text" inputMode="decimal"
         value={hours} onChange={(e) => { setHours(e.target.value); setHoursDirty(true); }} onBlur={commitHours} onKeyDown={blurOnEnter} />
       <button className="btn assignee" aria-label={`Assigned to ${members[chore.assignee].name}, tap to reassign`} style={{ borderColor: memberColor(chore.assignee) }}
         onClick={() => void updateChore(code, chore.id, { assignee: other(chore.assignee) })}>
@@ -59,14 +67,17 @@ export function Config() {
   const total = (m: MemberId) => active.filter((c) => c.assignee === m).reduce((s, c) => s + c.hours, 0);
   const [name, setName] = useState('');
   const [hours, setHours] = useState('1');
+  const [hoursError, setHoursError] = useState(false);
   const [assignee, setAssignee] = useState<MemberId>(me);
 
   function add(e: FormEvent) {
     e.preventDefault();
     const n = name.trim().slice(0, 60);
     if (!n) return;
-    void addChore(code, { name: n, hours: clampHours(parseFloat(hours)), assignee });
-    setName(''); setHours('1');
+    const h = parseHours(hours);
+    if (h === null) return setHoursError(true);
+    void addChore(code, { name: n, hours: h, assignee });
+    setName(''); setHours('1'); setHoursError(false);
   }
 
   return (
@@ -86,7 +97,8 @@ export function Config() {
       <h2>Add a chore</h2>
       <form className="card stack" onSubmit={add}>
         <label>New chore<input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder="Vacuum the flat" /></label>
-        <label>Hours per week<input type="number" inputMode="decimal" step={0.25} min={0.25} max={40} value={hours} onChange={(e) => setHours(e.target.value)} /></label>
+        <label>Hours per week<input type="text" inputMode="decimal" value={hours} onChange={(e) => { setHours(e.target.value); setHoursError(false); }} /></label>
+        {hoursError && <p className="error small" role="alert">Enter hours, e.g. 1.5</p>}
         <div className="kind-toggle" role="radiogroup" aria-label="Assignee">
           {MEMBER_IDS.map((m) => (
             <button type="button" key={m} role="radio" aria-checked={assignee === m} className={assignee === m ? 'on plus' : ''} onClick={() => setAssignee(m)}>{members[m].name}</button>
