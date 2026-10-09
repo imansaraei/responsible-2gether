@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useHousehold } from '../state/HouseholdContext';
 import { addChore, archiveChore, updateChore } from '../firebase/repo';
 import { MEMBER_IDS, other, type Chore, type MemberId } from '../domain/types';
@@ -11,17 +11,28 @@ export function clampHours(n: number): number {
 
 const fmt = (n: number) => `${Math.round(n * 100) / 100} h`;
 
-function ChoreRow({ chore }: { chore: Chore }) {
+const blurOnEnter = (e: KeyboardEvent<HTMLInputElement>) => { if (e.key === 'Enter') e.currentTarget.blur(); };
+
+function ChoreRow({ chore, index }: { chore: Chore; index: number }) {
   const { code, members } = useHousehold();
   const [name, setName] = useState(chore.name);
   const [hours, setHours] = useState(String(chore.hours));
+  const [nameDirty, setNameDirty] = useState(false);
+  const [hoursDirty, setHoursDirty] = useState(false);
+
+  useEffect(() => { if (!nameDirty) setName(chore.name); }, [chore.name, nameDirty]);
+  useEffect(() => { if (!hoursDirty) setHours(String(chore.hours)); }, [chore.hours, hoursDirty]);
 
   const commitName = () => {
+    if (!nameDirty) return;
+    setNameDirty(false);
     const n = name.trim().slice(0, 60);
     if (!n) return setName(chore.name);
     if (n !== chore.name) void updateChore(code, chore.id, { name: n });
   };
   const commitHours = () => {
+    if (!hoursDirty) return;
+    setHoursDirty(false);
     const h = clampHours(parseFloat(hours));
     setHours(String(h));
     if (h !== chore.hours) void updateChore(code, chore.id, { hours: h });
@@ -29,10 +40,10 @@ function ChoreRow({ chore }: { chore: Chore }) {
 
   return (
     <li className="card chore-row">
-      <input className="chore-name" aria-label="Chore name" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} onBlur={commitName} />
-      <input className="chore-hours" aria-label={`${chore.name} hours per week`} type="number" inputMode="decimal" step={0.25} min={0.25} max={40}
-        value={hours} onChange={(e) => setHours(e.target.value)} onBlur={commitHours} />
-      <button className="btn assignee" style={{ borderColor: memberColor(chore.assignee) }}
+      <input className="chore-name" aria-label={`Name of chore ${index + 1}`} value={name} maxLength={60} onChange={(e) => { setName(e.target.value); setNameDirty(true); }} onBlur={commitName} onKeyDown={blurOnEnter} />
+      <input className="chore-hours" aria-label={`Hours per week for chore ${index + 1}`} type="number" inputMode="decimal" step={0.25} min={0.25} max={40}
+        value={hours} onChange={(e) => { setHours(e.target.value); setHoursDirty(true); }} onBlur={commitHours} onKeyDown={blurOnEnter} />
+      <button className="btn assignee" aria-label={`Assigned to ${members[chore.assignee].name}, tap to reassign`} style={{ borderColor: memberColor(chore.assignee) }}
         onClick={() => void updateChore(code, chore.id, { assignee: other(chore.assignee) })}>
         {members[chore.assignee].name}
       </button>
@@ -70,7 +81,7 @@ export function Config() {
         ))}
       </div>
       <p className="muted small">Hours per week · tap a name to reassign.</p>
-      <ul className="cards">{active.map((c) => <ChoreRow key={c.id} chore={c} />)}</ul>
+      <ul className="cards">{active.map((c, i) => <ChoreRow key={c.id} chore={c} index={i} />)}</ul>
 
       <h2>Add a chore</h2>
       <form className="card stack" onSubmit={add}>

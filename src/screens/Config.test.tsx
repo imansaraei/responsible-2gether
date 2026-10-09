@@ -20,7 +20,9 @@ const ctx: HouseholdCtx = {
   ],
   device: { code: 'tidy-otter-maple-4821', me: 'a', lastExportAt: null }, updateDevice: () => {},
 };
-const renderIt = () => render(<HouseholdContext.Provider value={ctx}><Config /></HouseholdContext.Provider>);
+const wrap = (c: HouseholdCtx) => <HouseholdContext.Provider value={c}><Config /></HouseholdContext.Provider>;
+const renderIt = () => render(wrap(ctx));
+afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
 
 test.each([[0, 0.25], [0.3, 0.25], [0.4, 0.5], [99, 40], [Number.NaN, 0.25]])('clampHours(%s) = %s', (i, o) => {
   expect(clampHours(i)).toBe(o);
@@ -37,7 +39,7 @@ test('lists active chores with per-person totals', () => {
 test('assignee toggle swaps person', async () => {
   renderIt();
   const row = screen.getByDisplayValue('Cooking').closest('li')!;
-  await userEvent.click(within(row).getByRole('button', { name: 'Iman' }));
+  await userEvent.click(within(row).getByRole('button', { name: /Assigned to Iman/ }));
   expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c1', { assignee: 'b' });
 });
 
@@ -56,4 +58,56 @@ test('adds a chore', async () => {
   await userEvent.type(screen.getByLabelText('Hours per week'), '1.5');
   await userEvent.click(screen.getByRole('button', { name: 'Add chore' }));
   expect(addChore).toHaveBeenCalledWith('tidy-otter-maple-4821', { name: 'Vacuum', hours: 1.5, assignee: 'a' });
+});
+
+test('follows a remote rename and a no-op focus/blur does not write back', async () => {
+  const { rerender } = renderIt();
+  const input = screen.getByDisplayValue('Trash');
+  rerender(wrap({ ...ctx, chores: ctx.chores.map((c) => (c.id === 'c2' ? { ...c, name: 'Bins' } : c)) }));
+  expect(screen.getByDisplayValue('Bins')).toBe(input);
+  await userEvent.click(input);
+  await userEvent.tab();
+  expect(updateChore).not.toHaveBeenCalled();
+});
+
+test('typing a new name and blurring writes it', async () => {
+  renderIt();
+  const input = screen.getByDisplayValue('Trash');
+  await userEvent.clear(input);
+  await userEvent.type(input, 'Bins');
+  await userEvent.tab();
+  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2', { name: 'Bins' });
+});
+
+test('Enter commits via blur', async () => {
+  renderIt();
+  const input = screen.getByDisplayValue('Trash');
+  await userEvent.type(input, 's{Enter}');
+  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2', { name: 'Trashs' });
+});
+
+test('blurring an emptied name reverts and does not write', async () => {
+  renderIt();
+  const input = screen.getByDisplayValue('Trash');
+  await userEvent.clear(input);
+  await userEvent.tab();
+  expect(updateChore).not.toHaveBeenCalled();
+  expect(input).toHaveValue('Trash');
+});
+
+test('hours are clamped on blur', async () => {
+  renderIt();
+  const input = screen.getByLabelText('Hours per week for chore 2');
+  await userEvent.clear(input);
+  await userEvent.type(input, '0.3');
+  await userEvent.tab();
+  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2', { hours: 0.25 });
+});
+
+test('declined confirm does not archive', async () => {
+  vi.spyOn(window, 'confirm').mockReturnValue(false);
+  renderIt();
+  const row = screen.getByDisplayValue('Trash').closest('li')!;
+  await userEvent.click(within(row).getByRole('button', { name: /Remove/ }));
+  expect(archiveChore).not.toHaveBeenCalled();
 });
