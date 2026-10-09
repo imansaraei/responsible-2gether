@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --project demo-r2g --only firestore \"vitest run --config vitest.rules.config.ts\"",
-    "icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg"
+    "icons": "pwa-assets-generator --preset minimal-2023 public/icon.svg",
+    "deploy": "npm test && npm run build && npx wrangler deploy"
   },
   "dependencies": {
     "firebase": "^13.0.0",
@@ -34,6 +35,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.0.3"
+    "vitest": "^5.0.3",
+    "wrangler": "^4.149.0"
   }
 }

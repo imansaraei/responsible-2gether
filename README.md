@@ -1,8 +1,10 @@
 # Responsible 2gether
 
 A tiny PWA for two people sharing a home: weekly chore shares, helpfulness
-feedback, and a to-do list. Free to run (Firebase Spark + GitHub Pages), no
-logins — each phone just remembers who's holding it.
+feedback, and a to-do list. Free to run (Firebase Spark + Cloudflare Workers
+static assets), no logins — each phone just remembers who's holding it.
+
+Live at **https://2gether.imansaraei.com**.
 
 Design: `docs/superpowers/specs/2026-10-09-responsible-2gether-design.md`
 
@@ -19,12 +21,13 @@ Design: `docs/superpowers/specs/2026-10-09-responsible-2gether-design.md`
      npx firebase login
      npx firebase deploy --only firestore:rules --project <your-project-id>
      ```
-2. **GitHub Pages**
-   - Create a repo named `responsible-2gether` on your personal GitHub and push `main`.
-   - Repo Settings → Pages → Source: **GitHub Actions**. The workflow deploys on every push to `main`.
-   - Firebase console → Authentication → Settings → Authorised domains → add `<your-user>.github.io`.
+2. **Hosting (Cloudflare, free)**
+   - `wrangler.jsonc` deploys `dist/` as a Worker with static assets on the custom domain
+     `2gether.imansaraei.com` (the `imansaraei.com` zone must be in the same Cloudflare account).
+   - Deploy with `npm run deploy` (runs the tests, builds, then `wrangler deploy`;
+     `npx wrangler login` once if needed). GitHub Actions only runs tests and a build.
 3. **Phones**
-   - Open `https://<your-user>.github.io/responsible-2gether/`.
+   - Open `https://2gether.imansaraei.com`.
    - Phone 1 (any phone): *Create our household*. Settings → note the household code (use *Copy code*) or *Share join link*.
    - Phone 2, **iPhone**: do the install FIRST. Share → *Add to Home Screen*, then open the installed app (not Safari), choose *Join with a code* and paste the code. Home-screen apps on iOS don't share storage with Safari and drop the `#join` part of a link, so a join link opened in Safari won't carry over to the installed app.
    - Phone 2, **Android**: menu → *Install app*, then open the join link or use *Join with a code*.
