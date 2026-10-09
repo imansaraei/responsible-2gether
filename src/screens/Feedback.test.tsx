@@ -48,6 +48,14 @@ test('warns while composing a negative that would break the ratio', async () => 
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('radio', { name: /Needs work/ }));
   expect(screen.getByRole('alert')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent('Sending this would make it 2 positive and 2 negative this week.');
+  expect(screen.getByRole('alert')).not.toHaveTextContent(/so far/);
+});
+
+test('already-sent warning keeps the "so far" wording with the sent counts', () => {
+  weekFeedback = [...Array.from({ length: 9 }, (_, i) => fb('plus', i)), ...Array.from({ length: 5 }, (_, i) => fb('minus', 10 + i))];
+  renderIt();
+  expect(screen.getByRole('alert')).toHaveTextContent('You’ve given 9 positive and 5 negative so far.');
 });
 
 test('empty note cannot be sent', async () => {

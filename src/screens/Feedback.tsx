@@ -42,7 +42,9 @@ export function Feedback() {
 
       {warn && (
         <div className="warning" role="alert">
-          <strong>Lots of negative feedback this week.</strong> You’ve given {plus} positive and {minus} negative so far.
+          <strong>Lots of negative feedback this week.</strong> {kind === 'minus'
+            ? `Sending this would make it ${plus} positive and ${minus + 1} negative this week.`
+            : `You’ve given ${plus} positive and ${minus} negative so far.`}{' '}
           Too much negative feedback is usually just destructive. Consider redefining tasks, talking it through, or simply giving more positive feedback — aim for at least two positives per negative.
         </div>
       )}
