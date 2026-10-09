@@ -10,6 +10,28 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const backupFileName = (d: Date) =>
   `responsible-2gether-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
 
+const isAbort = (e: unknown) => (e as { name?: unknown } | null)?.name === 'AbortError';
+
+/** Share sheet where files can be shared (iOS "Save to Files", Android Drive); anchor download otherwise. */
+export async function saveBackupFile(file: File): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Responsible 2gether backup' });
+      return 'shared';
+    } catch (e) {
+      if (isAbort(e)) return 'cancelled';
+      throw e;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const a = Object.assign(document.createElement('a'), { href: url, download: file.name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  return 'downloaded';
+}
+
 const SYNC_LABEL = { synced: '● Synced', saving: '◌ Saving…', offline: '○ Offline — changes will sync later' };
 
 export function Settings() {
@@ -33,21 +55,21 @@ export function Settings() {
     try {
       if (navigator.share) await navigator.share({ title: 'Responsible 2gether', text, url: link });
       else { await navigator.clipboard.writeText(link); setMsg('Link copied.'); }
-    } catch { /* share sheet dismissed */ }
+    } catch (e) {
+      if (!isAbort(e)) setMsg(`Couldn’t share — copy this link: ${link}`);
+    }
   }
 
   async function doExport() {
     setMsg('Exporting…');
     try {
       const backup = await exportHousehold(code);
-      const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
-      const a = Object.assign(document.createElement('a'), { href: url, download: backupFileName(new Date()) });
-      a.click();
-      URL.revokeObjectURL(url);
+      const file = new File([JSON.stringify(backup, null, 2)], backupFileName(new Date()), { type: 'application/json' });
+      if ((await saveBackupFile(file)) === 'cancelled') return setMsg('Export cancelled.');
       updateDevice({ lastExportAt: Date.now() });
-      setMsg('Backup downloaded. Keep it somewhere safe (e.g. iCloud Drive / Google Drive).');
+      setMsg('Backup saved. Keep it somewhere safe (e.g. iCloud Drive / Google Drive).');
     } catch {
-      setMsg('Export failed. Are you online?');
+      setMsg('Export failed.');
     }
   }
 
@@ -59,7 +81,7 @@ export function Settings() {
     try { parsed = JSON.parse(await file.text()); } catch { return setMsg('That file isn’t valid JSON.'); }
     const r = validateBackup(parsed);
     if (!r.ok) return setMsg(r.error);
-    if (!confirm(`Replace ALL data in this household with the backup from ${new Date(r.backup.exportedAt).toLocaleString()}?`)) return;
+    if (!confirm(`Replace ALL data in this household with the backup from ${new Date(r.backup.exportedAt).toLocaleString()}? This can’t be undone — export a backup of the current data first if you might need it.`)) return;
     setMsg('Importing…');
     try { await importHousehold(code, r.backup); setMsg('Backup restored.'); }
     catch { setMsg('Import failed. Are you online?'); }
