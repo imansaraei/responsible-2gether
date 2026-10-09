@@ -10,16 +10,19 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const backupFileName = (d: Date) =>
   `responsible-2gether-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
 
-const isAbort = (e: unknown) => (e as { name?: unknown } | null)?.name === 'AbortError';
+const errName = (e: unknown) => (e as { name?: unknown } | null)?.name;
+const isAbort = (e: unknown) => errName(e) === 'AbortError';
 
 /** Share sheet where files can be shared (iOS "Save to Files", Android Drive); anchor download otherwise. */
-export async function saveBackupFile(file: File): Promise<'shared' | 'downloaded' | 'cancelled'> {
+export async function saveBackupFile(file: File): Promise<'shared' | 'downloaded' | 'cancelled' | 'needs-tap'> {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Responsible 2gether backup' });
       return 'shared';
     } catch (e) {
       if (isAbort(e)) return 'cancelled';
+      // User activation expired (slow export): the caller must offer a fresh tap.
+      if (errName(e) === 'NotAllowedError') return 'needs-tap';
       throw e;
     }
   }
@@ -40,6 +43,7 @@ export function Settings() {
   // A field is "dirty" only after the user typed in it; otherwise it mirrors the synced name.
   const [drafts, setDrafts] = useState<Partial<Record<MemberId, string>>>({});
   const [msg, setMsg] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const link = `${location.origin}${import.meta.env.BASE_URL}#join=${code}`;
 
   const saveName = (m: MemberId) => {
@@ -60,15 +64,38 @@ export function Settings() {
     }
   }
 
+  /** Shared by the first export and the "Save backup file" retry tap. */
+  function finishSave(result: Awaited<ReturnType<typeof saveBackupFile>>, file: File) {
+    if (result === 'cancelled') { setPendingFile(null); return setMsg('Export cancelled.'); }
+    if (result === 'needs-tap') {
+      setPendingFile(file);
+      return setMsg('Backup is ready — tap “Save backup file” to save it.');
+    }
+    setPendingFile(null);
+    updateDevice({ lastExportAt: Date.now() });
+    setMsg('Backup saved. Keep it somewhere safe (e.g. iCloud Drive / Google Drive).');
+  }
+
   async function doExport() {
     setMsg('Exporting…');
+    setPendingFile(null);
     try {
       const backup = await exportHousehold(code);
       const file = new File([JSON.stringify(backup, null, 2)], backupFileName(new Date()), { type: 'application/json' });
-      if ((await saveBackupFile(file)) === 'cancelled') return setMsg('Export cancelled.');
-      updateDevice({ lastExportAt: Date.now() });
-      setMsg('Backup saved. Keep it somewhere safe (e.g. iCloud Drive / Google Drive).');
-    } catch {
+      finishSave(await saveBackupFile(file), file);
+    } catch (e) {
+      console.error(e);
+      setMsg('Export failed.');
+    }
+  }
+
+  async function saveAgain() {
+    const file = pendingFile;
+    if (!file) return;
+    try {
+      finishSave(await saveBackupFile(file), file);
+    } catch (e) {
+      console.error(e);
       setMsg('Export failed.');
     }
   }
@@ -124,6 +151,7 @@ export function Settings() {
         )}
         {device.lastExportAt && <p className="muted small">Last export from this phone: {new Date(device.lastExportAt).toLocaleDateString()}</p>}
         <button className="btn primary" onClick={doExport}>Export backup (JSON)</button>
+        {pendingFile && <button className="btn primary" onClick={saveAgain}>Save backup file</button>}
         <label className="btn file">Import backup…
           <input type="file" accept="application/json,.json" onChange={doImport} className="sr-only" />
         </label>

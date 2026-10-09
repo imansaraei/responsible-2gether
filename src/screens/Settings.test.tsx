@@ -152,3 +152,34 @@ test('share link falls back to showing the link on non-abort failure', async () 
   await userEvent.click(screen.getByRole('button', { name: 'Share join link' }));
   expect(await screen.findByText(/Couldn’t share — copy this link: .*#join=tidy-otter-maple-4821/)).toBeInTheDocument();
 });
+
+test('saveBackupFile reports a blocked share (expired user activation) as needs-tap', async () => {
+  setNav({ canShare: () => true, share: vi.fn().mockRejectedValue(new DOMException('x', 'NotAllowedError')) });
+  expect(await saveBackupFile(testFile())).toBe('needs-tap');
+});
+
+test('a blocked share shows a Save button whose tap shares; lastExportAt is set only after success', async () => {
+  exportHousehold.mockResolvedValue(backup);
+  const share = vi.fn()
+    .mockRejectedValueOnce(new DOMException('x', 'NotAllowedError'))
+    .mockResolvedValueOnce(undefined);
+  setNav({ canShare: () => true, share });
+  renderIt();
+  await userEvent.click(screen.getByRole('button', { name: /Export backup/ }));
+  const save = await screen.findByRole('button', { name: 'Save backup file' });
+  expect(updateDevice).not.toHaveBeenCalled();
+  await userEvent.click(save);
+  expect(share).toHaveBeenCalledTimes(2);
+  expect(await screen.findByText(/Backup saved/)).toBeInTheDocument();
+  expect(updateDevice).toHaveBeenCalledWith({ lastExportAt: expect.any(Number) });
+  expect(screen.queryByRole('button', { name: 'Save backup file' })).toBeNull();
+});
+
+test('a failed export logs the error', async () => {
+  const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+  exportHousehold.mockRejectedValue(new Error('offline'));
+  renderIt();
+  await userEvent.click(screen.getByRole('button', { name: /Export backup/ }));
+  expect(await screen.findByText('Export failed.')).toBeInTheDocument();
+  expect(err).toHaveBeenCalled();
+});

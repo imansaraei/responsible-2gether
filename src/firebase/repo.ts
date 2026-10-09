@@ -107,7 +107,8 @@ export async function exportHousehold(code: string): Promise<Backup> {
   if (!h.exists()) throw new Error('Household not found.');
   const chores = (await getDocsFromServer(choresCol(db, code))).docs.map((d) => toChore(d.id, d.data()));
   const weeks: Backup['weeks'] = {};
-  for (const w of (await getDocsFromServer(collection(db, 'households', code, 'weeks'))).docs) {
+  const weekDocs = (await getDocsFromServer(collection(db, 'households', code, 'weeks'))).docs;
+  await Promise.all(weekDocs.map(async (w) => {
     const [c, f] = await Promise.all([
       getDocsFromServer(collection(w.ref, 'completions')),
       getDocsFromServer(collection(w.ref, 'feedback')),
@@ -116,7 +117,7 @@ export async function exportHousehold(code: string): Promise<Backup> {
       completions: c.docs.map((d) => toCompletion(d.id, d.data())),
       feedback: f.docs.map((d) => toFeedback(d.id, d.data())),
     };
-  }
+  }));
   return { version: 1, exportedAt: Date.now(), code, members: h.data().members as Members, chores, weeks };
 }
 
