@@ -4,3 +4,5 @@ dist
 *.log
 .firebase
 firestore-debug.log
+.dev.vars
+.wrangler/

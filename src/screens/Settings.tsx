@@ -5,6 +5,7 @@ import { exportHousehold, importHousehold, renameMember } from '../firebase/repo
 import { validateBackup } from '../domain/backup';
 import { exportReminderDue } from '../device';
 import { MEMBER_IDS, type MemberId } from '../domain/types';
+import { RemindersCard } from '../components/RemindersCard';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const backupFileName = (d: Date) =>
@@ -130,6 +131,9 @@ export function Settings() {
           <button key={m} role="radio" aria-checked={me === m} className={me === m ? 'on plus' : ''} onClick={() => updateDevice({ me: m })}>{members[m].name}</button>
         ))}
       </div>
+
+      <h2>Reminders</h2>
+      <RemindersCard />
 
       <h2>Names</h2>
       <div className="card stack">

@@ -13,6 +13,7 @@ import { Todo } from './screens/Todo';
 import { Feedback } from './screens/Feedback';
 import { Config } from './screens/Config';
 import { Settings } from './screens/Settings';
+import { syncReminders } from './push/reminders';
 
 const SCREENS: Record<TabId, () => ReactElement> = { config: Config, feedback: Feedback, dashboard: Dashboard, todo: Todo, settings: Settings };
 
@@ -44,6 +45,11 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   const currentWeekId = useCurrentWeekId();
   const [tab, setTab] = useState<TabId>('dashboard');
   const offline = useSyncStatus(code) === 'offline';
+
+  // Keep the reminder server's copy of this device fresh (time zone after travel, rotated subscription).
+  useEffect(() => {
+    syncReminders().catch(() => undefined);
+  }, []);
 
   const ctx = useMemo<HouseholdCtx | null>(
     () => (members && device.me ? { code, me: device.me, members, chores, currentWeekId, device, updateDevice } : null),

@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:emu": "VITE_USE_EMULATOR=1 vite",
     "emulators": "firebase emulators:start --project demo-r2g",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && tsc --noEmit -p worker && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,11 +16,13 @@
     "deploy": "npm test && npm run build && npx wrangler deploy"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0",
     "firebase": "^13.0.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261013.1",
     "@firebase/rules-unit-testing": "^6.0.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

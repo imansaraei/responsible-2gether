@@ -9,6 +9,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png', 'icon.svg'],
+      workbox: {
+        // Daily-reminder push + notification-click handlers live in public/push-sw.js.
+        importScripts: ['push-sw.js'],
+        navigateFallbackDenylist: [/^\/api\//],
+      },
       manifest: {
         name: 'Responsible 2gether',
         short_name: '2gether',
