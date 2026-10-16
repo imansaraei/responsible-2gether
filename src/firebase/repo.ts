@@ -6,6 +6,7 @@ import { ensureSignedIn, getDb } from './app';
 import { track } from './pending';
 import type { Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, Multiplier, Percent } from '../domain/types';
 import { other } from '../domain/types';
+import { legacyHoursFor } from '../domain/blocks';
 import { planLogWrites, type Backup } from '../domain/backup';
 import { STARTER_CHORES, starterAssignee } from '../domain/starterChores';
 
@@ -39,9 +40,12 @@ export async function renameMember(code: string, m: MemberId, name: string): Pro
   await track(updateDoc(hh(getDb(), code), { [`members.${m}.name`]: name }));
 }
 
-export async function addChore(code: string, input: { name: string; hours: number; assignee: MemberId }) {
+export async function addChore(code: string, input: { name: string; blockMinutes: number; assignee: MemberId }) {
   await ensureSignedIn();
-  await track(setDoc(doc(choresCol(getDb(), code), newId()), { ...input, createdAt: Date.now(), archivedAt: null }));
+  await track(setDoc(doc(choresCol(getDb(), code), newId()), {
+    name: input.name, blockMinutes: input.blockMinutes, hours: legacyHoursFor(input.blockMinutes),
+    assignee: input.assignee, createdAt: Date.now(), archivedAt: null,
+  }));
 }
 
 export async function updateChore(code: string, id: string, patch: Partial<Pick<Chore, 'name' | 'hours' | 'blockMinutes' | 'assignee'>>) {
