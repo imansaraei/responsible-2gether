@@ -1,4 +1,4 @@
-import { validateBackup, type Backup } from './backup';
+import { planLogWrites, validateBackup, type Backup } from './backup';
 
 const good: Backup = {
   version: 1,
@@ -33,4 +33,28 @@ test.each([
 ])('rejects %s', (_label, input) => {
   const r = validateBackup(input);
   expect(r.ok).toBe(false);
+});
+
+test('accepts optional blockMinutes on chores and optional logs per week', () => {
+  const withBlocks = {
+    ...good,
+    chores: [{ ...good.chores[0], blockMinutes: 45 }],
+    weeks: { '2026-W41': { ...good.weeks['2026-W41'], logs: [{ id: 'l1', choreId: 'c1', name: 'Cooking', by: 'a', multiplier: 2, minutes: 90, day: '2026-10-08', createdAt: 5 }] } },
+  };
+  expect(validateBackup(JSON.parse(JSON.stringify(withBlocks))).ok).toBe(true);
+});
+
+test.each([
+  ['bad blockMinutes', (b: any) => { b.chores[0].blockMinutes = 7; }],
+  ['bad log multiplier', (b: any) => { b.weeks['2026-W41'].logs = [{ id: 'l1', choreId: 'c1', name: 'Cooking', by: 'a', multiplier: 5, minutes: 90, day: '2026-10-08', createdAt: 5 }]; }],
+  ['bad log day', (b: any) => { b.weeks['2026-W41'].logs = [{ id: 'l1', choreId: 'c1', name: 'Cooking', by: 'a', multiplier: 1, minutes: 45, day: 'yesterday', createdAt: 5 }]; }],
+])('rejects %s', (_l, mutate) => {
+  const b = JSON.parse(JSON.stringify(good));
+  mutate(b);
+  expect(validateBackup(b).ok).toBe(false);
+});
+
+test('planLogWrites skips logs that already exist (immutable) and keeps all paths', () => {
+  expect(planLogWrites(['w/logs/a', 'w/logs/b'], new Set(['w/logs/a']))).toEqual(['w/logs/b']);
+  expect(planLogWrites(['w/logs/a'], new Set())).toEqual(['w/logs/a']);
 });

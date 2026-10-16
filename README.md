@@ -46,8 +46,10 @@ Firestore. On each phone:
 
 ## How scoring works
 
-- Each chore has hours and a completion percent (0/25/50/75/100); done hours = hours × percent / 100.
-- A person's share is the sum of done hours of the chores assigned to them.
+- Each chore has a time block: the minutes it takes each time it's done (e.g. loading the dishwasher = 15 min). Edit blocks in Chores › Setup.
+- Logging a chore (Chores › To-do) adds its block × 1, 2 or 3. You can undo it for 10 seconds.
+- Minutes count for whoever logged them; the weekly chart shows each person's share of the minutes logged.
+- Weeks rated with percentages before time blocks still show, as estimated minutes.
 - Helpfulness is 100 minus 10 for every negative feedback received that week (never below 0). Positive feedback never changes it, and resolving a negative does not restore it.
 - Warning: if you gave negative feedback but fewer than 2 positives per negative (positives < 2 × negatives), the app nudges you to balance it out.
 - Weeks run Monday to Sunday and reset every Monday; past weeks are kept as history.

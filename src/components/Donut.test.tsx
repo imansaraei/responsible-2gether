@@ -5,8 +5,8 @@ import { sliceColor } from './colors';
 test('one arc per slice with dash length proportional to value', () => {
   const { container } = render(
     <Donut ariaLabel="test" label="x" slices={[
-      { key: 'a1', label: 'Cooking', value: 3, member: 'a', shadeIndex: 0, shadeCount: 1 },
-      { key: 'notdone', label: 'Not done yet', value: 1, member: null, shadeIndex: 0, shadeCount: 1 },
+      { key: 'a1', label: 'Cooking', value: 90, member: 'a', shadeIndex: 0, shadeCount: 1 },
+      { key: 'notdone', label: 'Not done yet', value: 30, member: null, shadeIndex: 0, shadeCount: 1 },
     ]} />,
   );
   const arcs = container.querySelectorAll('circle[data-slice]');
@@ -15,7 +15,7 @@ test('one arc per slice with dash length proportional to value', () => {
   // With 2px gap between arcs, dash length is reduced by GAP for multi-slice charts
   // Compare total arc lengths: len(a1) ≈ 3*circumference/4 - 2, len(notdone) ≈ circumference/4 - 2
   expect((len(arcs[0]) + 2) / (len(arcs[1]) + 2)).toBeCloseTo(3);
-  expect(arcs[0].querySelector('title')!.textContent).toBe('Cooking — 3 h');
+  expect(arcs[0].querySelector('title')!.textContent).toBe('Cooking — 1 h 30 m');
 });
 
 test('empty chart draws a single empty ring', () => {

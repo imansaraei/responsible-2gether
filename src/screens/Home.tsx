@@ -1,6 +1,6 @@
 import { useHousehold } from '../state/HouseholdContext';
 import { useWeek } from '../firebase/hooks';
-import { choresForWeek, memberHours, sharePercents } from '../domain/scoring';
+import { summarizeWeek } from '../domain/weekSummary';
 import { other } from '../domain/types';
 import { exportReminderDue } from '../device';
 import { memberColor } from '../components/colors';
@@ -8,12 +8,10 @@ import type { NavTarget } from '../navigation';
 
 export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
   const { code, me, members, chores, currentWeekId, device } = useHousehold();
-  const { completions, feedback, loading } = useWeek(code, currentWeekId);
+  const { completions, feedback, logs, loading } = useWeek(code, currentWeekId);
   const partner = other(me);
 
-  const views = choresForWeek(currentWeekId, chores, completions, true);
-  const pct = sharePercents(views);
-  const { done } = memberHours(views);
+  const { pct, done } = summarizeWeek(currentWeekId, chores, completions, logs, true);
   const toActOn = feedback.filter((f) => f.kind === 'minus' && f.to === me && !f.resolved).length;
   const split = `You ${pct[me]}% · ${members[partner].name} ${pct[partner]}%`;
 
@@ -45,7 +43,7 @@ export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
         <span className="module-card-title">🧺 Tidy Together <span aria-hidden="true">›</span></span>
         {loading ? (
           <span className="muted">Loading…</span>
-        ) : done === 0 ? (
+        ) : done.total === 0 ? (
           <span className="muted">Nothing logged yet this week</span>
         ) : (
           <>

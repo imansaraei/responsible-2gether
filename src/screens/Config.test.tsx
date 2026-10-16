@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HouseholdContext, type HouseholdCtx } from '../state/HouseholdContext';
-import { Config, clampHours, parseHours } from './Config';
+import { Config } from './Config';
 
 const addChore = vi.fn(), updateChore = vi.fn(), archiveChore = vi.fn();
 vi.mock('../firebase/repo', () => ({
@@ -24,16 +24,13 @@ const wrap = (c: HouseholdCtx) => <HouseholdContext.Provider value={c}><Config /
 const renderIt = () => render(wrap(ctx));
 afterEach(() => { vi.restoreAllMocks(); vi.clearAllMocks(); });
 
-test.each([[0, 0.25], [0.3, 0.25], [0.4, 0.5], [99, 40], [Number.NaN, 0.25]])('clampHours(%s) = %s', (i, o) => {
-  expect(clampHours(i)).toBe(o);
-});
-
-test('lists active chores with per-person totals', () => {
+test('lists active chores with block minutes and per-person chore counts', () => {
   renderIt();
   expect(screen.getByDisplayValue('Cooking')).toBeInTheDocument();
   expect(screen.queryByDisplayValue('Old')).not.toBeInTheDocument();
-  expect(screen.getByTestId('total-a')).toHaveTextContent('7 h');
-  expect(screen.getByTestId('total-b')).toHaveTextContent('0.5 h');
+  expect(screen.getByLabelText('Minutes per time for Cooking')).toHaveValue('45');
+  expect(screen.getByTestId('total-a')).toHaveTextContent('1 chore');
+  expect(screen.getByTestId('total-b')).toHaveTextContent('1 chore');
 });
 
 test('assignee toggle swaps person', async () => {
@@ -51,13 +48,13 @@ test('remove archives after confirm', async () => {
   expect(archiveChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2');
 });
 
-test('adds a chore', async () => {
+test('adds a chore with its block minutes', async () => {
   renderIt();
   await userEvent.type(screen.getByLabelText('New chore'), 'Vacuum');
-  await userEvent.clear(screen.getByLabelText('Hours per week'));
-  await userEvent.type(screen.getByLabelText('Hours per week'), '1.5');
+  await userEvent.clear(screen.getByLabelText('Minutes per time'));
+  await userEvent.type(screen.getByLabelText('Minutes per time'), '25');
   await userEvent.click(screen.getByRole('button', { name: 'Add chore' }));
-  expect(addChore).toHaveBeenCalledWith('tidy-otter-maple-4821', { name: 'Vacuum', hours: 1.5, assignee: 'a' });
+  expect(addChore).toHaveBeenCalledWith('tidy-otter-maple-4821', { name: 'Vacuum', blockMinutes: 25, assignee: 'a' });
 });
 
 test('follows a remote rename and a no-op focus/blur does not write back', async () => {
@@ -95,13 +92,14 @@ test('blurring an emptied name reverts and does not write', async () => {
   expect(input).toHaveValue('Trash');
 });
 
-test('hours are clamped on blur', async () => {
+test('block minutes are rounded to 5 and clamped on blur', async () => {
   renderIt();
-  const input = screen.getByLabelText('Hours per week for Trash');
+  const input = screen.getByLabelText('Minutes per time for Cooking');
   await userEvent.clear(input);
-  await userEvent.type(input, '0.3');
+  await userEvent.type(input, '22');
   await userEvent.tab();
-  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2', { hours: 0.25 });
+  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c1', { blockMinutes: 20 });
+  expect(input).toHaveValue('20');
 });
 
 test('declined confirm does not archive', async () => {
@@ -112,42 +110,29 @@ test('declined confirm does not archive', async () => {
   expect(archiveChore).not.toHaveBeenCalled();
 });
 
-test.each([['1,5', 1.5], [' 2 ', 2], ['', null], ['   ', null], ['abc', null], ['0.3', 0.25]])('parseHours(%j) = %s', (i, o) => {
-  expect(parseHours(i)).toBe(o);
-});
-
-test('blurring an emptied hours field reverts and does not write', async () => {
+test('blurring an emptied block field reverts and does not write', async () => {
   renderIt();
-  const input = screen.getByLabelText('Hours per week for Trash');
+  const input = screen.getByLabelText('Minutes per time for Cooking');
   await userEvent.clear(input);
   await userEvent.tab();
   expect(updateChore).not.toHaveBeenCalled();
-  expect(input).toHaveValue('0.5');
+  expect(input).toHaveValue('45');
 });
 
-test('a comma decimal is accepted in a row', async () => {
-  renderIt();
-  const input = screen.getByLabelText('Hours per week for Trash');
-  await userEvent.clear(input);
-  await userEvent.type(input, '1,5');
-  await userEvent.tab();
-  expect(updateChore).toHaveBeenCalledWith('tidy-otter-maple-4821', 'c2', { hours: 1.5 });
-});
-
-test('add form with empty hours does not add, keeps the form and explains', async () => {
+test('add form with empty minutes does not add, keeps the form and explains', async () => {
   renderIt();
   await userEvent.type(screen.getByLabelText('New chore'), 'Vacuum');
-  await userEvent.clear(screen.getByLabelText('Hours per week'));
+  await userEvent.clear(screen.getByLabelText('Minutes per time'));
   await userEvent.click(screen.getByRole('button', { name: 'Add chore' }));
   expect(addChore).not.toHaveBeenCalled();
-  expect(screen.getByText('Enter hours, e.g. 1.5')).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent('Enter minutes, e.g. 15');
   expect(screen.getByLabelText('New chore')).toHaveValue('Vacuum');
 });
 
 test('row inputs are labelled with the chore name', () => {
   renderIt();
   expect(screen.getByLabelText('Name of Cooking')).toHaveValue('Cooking');
-  expect(screen.getByLabelText('Hours per week for Cooking')).toHaveValue('7');
+  expect(screen.getByLabelText('Minutes per time for Cooking')).toHaveValue('45');
 });
 
 test('row labels fall back to the position when the name is empty', () => {
@@ -157,5 +142,5 @@ test('row labels fall back to the position when the name is empty', () => {
     render(wrap({ ...ctx, chores: [{ ...ctx.chores[0], name: '' }] }));
   }
   expect(screen.getByLabelText('Name of chore 1')).toBeInTheDocument();
-  expect(screen.getByLabelText('Hours per week for chore 1')).toBeInTheDocument();
+  expect(screen.getByLabelText('Minutes per time for chore 1')).toBeInTheDocument();
 });

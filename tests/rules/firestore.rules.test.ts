@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import {
   assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 
 const CODE = 'tidy-otter-maple-4821';
 const household = { members: { a: { name: 'Iman' }, b: { name: 'Sam' } }, createdAt: 1 };
@@ -96,4 +96,30 @@ test('an import-shaped batch (sets plus a stale delete) passes for a signed-in d
   await assertSucceeds(batch.commit());
   expect((await getDoc(h(authed(), 'chores', 'stale'))).exists()).toBe(false);
   expect((await getDoc(h(authed(), 'chores', 'c1'))).exists()).toBe(true);
+});
+
+const logDoc = { choreId: 'c1', name: 'Cooking', by: 'a', multiplier: 2, minutes: 90, day: '2026-10-16', createdAt: 1 };
+
+test('chore logs: valid log accepted, bad multiplier/minutes/day/extra keys rejected, no updates', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1'), logDoc));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l2'), { ...logDoc, multiplier: 4 }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l3'), { ...logDoc, minutes: 1000 }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l4'), { ...logDoc, minutes: 12.5 }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l5'), { ...logDoc, day: '16/10/2026' }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l6'), { ...logDoc, by: 'c' }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l7'), { ...logDoc, extra: true }));
+  await assertFails(updateDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1'), { minutes: 15 }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1'), logDoc));
+  await assertSucceeds(deleteDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1')));
+});
+
+test('chores accept an optional whole-minute blockMinutes between 5 and 240', async () => {
+  const base = { name: 'Cooking', hours: 7, assignee: 'a', createdAt: 1, archivedAt: null };
+  await assertSucceeds(setDoc(h(authed(), 'chores', 'b1'), { ...base, blockMinutes: 45 }));
+  await assertSucceeds(setDoc(h(authed(), 'chores', 'b2'), base));
+  await assertFails(setDoc(h(authed(), 'chores', 'b3'), { ...base, blockMinutes: 0 }));
+  await assertFails(setDoc(h(authed(), 'chores', 'b4'), { ...base, blockMinutes: 300 }));
+  await assertFails(setDoc(h(authed(), 'chores', 'b5'), { ...base, blockMinutes: 7.5 }));
+  await assertFails(setDoc(h(authed(), 'chores', 'b6'), { ...base, blockMinutes: 7 }));
+  await assertSucceeds(updateDoc(h(authed(), 'chores', 'b1'), { blockMinutes: 30 }));
 });

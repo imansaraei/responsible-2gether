@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import type { DonutSlice } from '../domain/scoring';
 import { sliceColor } from './colors';
+import { formatMinutes } from '../domain/blocks';
 
 const SIZE = 240, STROKE = 38, R = (SIZE - STROKE) / 2, C = 2 * Math.PI * R, GAP = 2;
-const fmt = (h: number) => `${Math.round(h * 100) / 100} h`;
 
 export function Donut({ slices, label, ariaLabel }: { slices: DonutSlice[]; label: ReactNode; ariaLabel: string }) {
   const total = slices.reduce((s, x) => s + x.value, 0);
@@ -26,7 +26,7 @@ export function Donut({ slices, label, ariaLabel }: { slices: DonutSlice[]; labe
                 strokeDasharray={`${dashLen} ${C - dashLen}`}
                 strokeDashoffset={-offset}
               >
-                <title>{`${s.label} — ${fmt(s.value)}`}</title>
+                <title>{`${s.label} — ${formatMinutes(s.value)}`}</title>
               </circle>
             );
             offset += len;

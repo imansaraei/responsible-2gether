@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { collection, doc, onSnapshot } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
 import { onPendingChange, pendingWrites } from './pending';
-import { toChore, toCompletion, toFeedback } from './repo';
-import type { Chore, Completion, Feedback, Members } from '../domain/types';
+import { toChore, toCompletion, toFeedback, toLog } from './repo';
+import type { Chore, ChoreLog, Completion, Feedback, Members } from '../domain/types';
 
 function useSignedIn(): boolean {
   const [ready, setReady] = useState(false);
@@ -56,24 +56,34 @@ export function useWeek(code: string, weekId: string) {
   const ready = useSignedIn();
   const [completions, setCompletions] = useState<Completion[]>([]);
   const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [logs, setLogs] = useState<ChoreLog[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!ready) return;
     setLoading(true);
     setCompletions([]);
     setFeedback([]);
+    setLogs([]);
     const base = ['households', code, 'weeks', weekId] as const;
+    const seen = { completions: false, logs: false };
+    const settle = () => { if (seen.completions && seen.logs) setLoading(false); };
     const un1 = onSnapshot(collection(getDb(), ...base, 'completions'), (s) => {
       setCompletions(s.docs.map((d) => toCompletion(d.id, d.data())));
-      setLoading(false);
-    }, (e) => console.error(e));
+      seen.completions = true;
+      settle();
+    }, (e) => { console.error(e); seen.completions = true; settle(); });
     const un2 = onSnapshot(collection(getDb(), ...base, 'feedback'), (s) =>
       setFeedback(s.docs.map((d) => toFeedback(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)),
       (e) => console.error(e),
     );
-    return () => { un1(); un2(); };
+    const un3 = onSnapshot(collection(getDb(), ...base, 'logs'), (s) => {
+      setLogs(s.docs.map((d) => toLog(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt));
+      seen.logs = true;
+      settle();
+    }, (e) => { console.error(e); seen.logs = true; settle(); });
+    return () => { un1(); un2(); un3(); };
   }, [ready, code, weekId]);
-  return { completions, feedback, loading };
+  return { completions, feedback, logs, loading };
 }
 
 export type SyncStatus = 'synced' | 'saving' | 'offline';
