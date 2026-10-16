@@ -494,9 +494,11 @@ light and dark themes, numerals in tabular figures, Persian strings set `dir="rt
 - **Opening it lands on Home**, with the two primary buttons above the fold, so the most common
   task needs no navigation.
 
-Note: iOS doesn't refresh an installed PWA's name or icon. After the rename, each phone re-adds
-the app once (same address and data, nothing to re-join). Keeping the origin
-`2gether.imansaraei.com` keeps device identity, reminders and cached data.
+Note: iOS doesn't refresh an installed PWA's name or icon, so each phone re-adds the app once.
+Household data is safe in Firestore, but a newly added iOS Home Screen app starts with empty
+device storage. Each phone must re-join with the household code (Settings › Copy code first),
+pick its person, and turn reminders on again, then turn reminders off in the old app before
+deleting it, to avoid duplicate reminders. The origin stays `2gether.imansaraei.com`.
 
 ---
 

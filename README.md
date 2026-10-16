@@ -1,7 +1,7 @@
-# Responsible 2gether
+# Khooneh (formerly Responsible 2gether)
 
-A tiny PWA for two people sharing a home: weekly chore shares, helpfulness
-feedback, and a to-do list. Free to run (Firebase Spark + Cloudflare Workers
+The family command centre: a tiny PWA for the people sharing a home. Chores now
+(weekly shares, helpfulness feedback, a to-do list), Pocket Money coming. Free to run (Firebase Spark + Cloudflare Workers
 static assets), no logins — each phone just remembers who's holding it.
 
 Live at **https://2gether.imansaraei.com**.
@@ -31,6 +31,18 @@ Design: `docs/superpowers/specs/2026-10-09-responsible-2gether-design.md`
    - Phone 1 (any phone): *Create our household*. Settings → note the household code (use *Copy code*) or *Share join link*.
    - Phone 2, **iPhone**: do the install FIRST. Share → *Add to Home Screen*, then open the installed app (not Safari), choose *Join with a code* and paste the code. Home-screen apps on iOS don't share storage with Safari and drop the `#join` part of a link, so a join link opened in Safari won't carry over to the installed app.
    - Phone 2, **Android**: menu → *Install app*, then open the join link or use *Join with a code*.
+
+## Upgrading an existing phone to Khooneh
+
+iOS doesn't refresh an installed app's name or icon, so re-add it once. A newly
+added Home Screen app starts with empty device storage; household data is safe in
+Firestore. On each phone:
+
+1. In the old app, open Settings and tap *Copy code* first.
+2. Add the new app to the Home Screen from Safari (Share → *Add to Home Screen*).
+3. Open it, choose *Join with a code*, paste the code, and pick who you are.
+4. Turn reminders on again.
+5. In the old app, turn reminders off, then delete it, to avoid duplicate reminders.
 
 ## How scoring works
 
