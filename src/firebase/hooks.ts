@@ -71,7 +71,7 @@ export function useWeek(code: string, weekId: string) {
       setCompletions(s.docs.map((d) => toCompletion(d.id, d.data())));
       seen.completions = true;
       settle();
-    }, (e) => console.error(e));
+    }, (e) => { console.error(e); seen.completions = true; settle(); });
     const un2 = onSnapshot(collection(getDb(), ...base, 'feedback'), (s) =>
       setFeedback(s.docs.map((d) => toFeedback(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)),
       (e) => console.error(e),
@@ -80,7 +80,7 @@ export function useWeek(code: string, weekId: string) {
       setLogs(s.docs.map((d) => toLog(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt));
       seen.logs = true;
       settle();
-    }, (e) => console.error(e));
+    }, (e) => { console.error(e); seen.logs = true; settle(); });
     return () => { un1(); un2(); un3(); };
   }, [ready, code, weekId]);
   return { completions, feedback, logs, loading };

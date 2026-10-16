@@ -22,7 +22,7 @@ export const MIN_BLOCK_MINUTES = 5;
 export const MAX_BLOCK_MINUTES = 240;
 
 export const blockMinutesOf = (c: Pick<Chore, 'name' | 'blockMinutes'>): number =>
-  c.blockMinutes ?? DEFAULT_BLOCK_MINUTES[c.name] ?? FALLBACK_BLOCK_MINUTES;
+  c.blockMinutes ?? (Object.hasOwn(DEFAULT_BLOCK_MINUTES, c.name) ? DEFAULT_BLOCK_MINUTES[c.name] : FALLBACK_BLOCK_MINUTES);
 
 export function clampBlockMinutes(n: number): number {
   if (!Number.isFinite(n)) return MIN_BLOCK_MINUTES;

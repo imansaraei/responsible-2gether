@@ -5,7 +5,7 @@ import { blockMinutesOf, formatMinutes, todayCount, todayKey } from '../domain/b
 import { MULTIPLIERS, other, type Chore, type ChoreLog, type Multiplier } from '../domain/types';
 
 const UNDO_MS = 10_000;
-const SAVE_ERROR = 'Couldn’t save — check your connection.';
+const SAVE_ERROR = 'Couldn’t save this log — try again.';
 
 export function ChoreLogger({ logs }: { logs: ChoreLog[] }) {
   const { code, me, members, chores, currentWeekId } = useHousehold();
@@ -97,12 +97,14 @@ export function ChoreLogger({ logs }: { logs: ChoreLog[] }) {
         </section>
       ))}
       {error && <p className="error" role="alert">{error}</p>}
-      {toast && (
-        <div className="toast" role="status">
-          <span>{toast.text}</span>
-          <button className="btn ghost small" onClick={undo}>Undo</button>
-        </div>
-      )}
+      <div role="status">
+        {toast && (
+          <div className="toast">
+            <span>{toast.text}</span>
+            <button className="btn ghost small" aria-label={`Undo ${toast.text}`} onClick={undo}>Undo</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

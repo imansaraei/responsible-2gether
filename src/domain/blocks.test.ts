@@ -45,3 +45,7 @@ test('todayCount counts my logs of a chore today', () => {
   const logs = [log({}), log({ multiplier: 2 }), log({ by: 'b' }), log({ day: '2026-10-15' }), log({ choreId: 'c2' })];
   expect(todayCount(logs, 'c1', 'a', '2026-10-16')).toBe(2);
 });
+
+test('a chore named like an Object.prototype member gets the fallback', () => {
+  expect(blockMinutesOf({ name: 'constructor' })).toBe(15);
+});

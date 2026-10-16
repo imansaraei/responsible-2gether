@@ -73,9 +73,9 @@ test('Undo deletes the log that was just added', async () => {
   await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Add' }));
   const id = (addLog.mock.calls[0] as unknown[])[3];
-  await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  await userEvent.click(screen.getByRole('button', { name: /^Undo/ }));
   expect(deleteLog).toHaveBeenCalledWith('tidy-otter-maple-4821', '2026-W42', id);
-  expect(screen.queryByRole('status')).toBeNull();
+  expect(screen.getByRole('status')).toBeEmptyDOMElement();
 });
 
 test('the undo toast disappears after 10 seconds', async () => {
@@ -84,9 +84,9 @@ test('the undo toast disappears after 10 seconds', async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   await user.click(screen.getByRole('button', { name: /Cooking/ }));
   await user.click(screen.getByRole('button', { name: 'Add' }));
-  expect(screen.getByRole('status')).toBeInTheDocument();
+  expect(screen.getByRole('status')).not.toBeEmptyDOMElement();
   act(() => { vi.advanceTimersByTime(10_000); });
-  expect(screen.queryByRole('status')).toBeNull();
+  expect(screen.getByRole('status')).toBeEmptyDOMElement();
 });
 
 test('undo after a week rollover deletes from the original week', async () => {
@@ -94,26 +94,34 @@ test('undo after a week rollover deletes from the original week', async () => {
   await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Add' }));
   rerender(<HouseholdContext.Provider value={{ ...ctx, currentWeekId: '2026-W43' }}><ChoreLogger logs={[]} /></HouseholdContext.Provider>);
-  await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  await userEvent.click(screen.getByRole('button', { name: /^Undo/ }));
   expect(deleteLog).toHaveBeenCalledWith('tidy-otter-maple-4821', '2026-W42', expect.any(String));
 });
 
 test('a failed write shows an alert, cleared by the next successful Add', async () => {
   addLog.mockRejectedValueOnce(new Error('x'));
   renderIt();
-  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: /^Cooking/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Add' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t save — check your connection.');
-  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t save this log — try again.');
+  await userEvent.click(screen.getByRole('button', { name: /^Cooking/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Add' }));
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
+test('the always-mounted status region is empty until something is logged, and Undo names the log', async () => {
+  renderIt();
+  expect(screen.getByRole('status')).toBeEmptyDOMElement();
+  await userEvent.click(screen.getByRole('button', { name: /^Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByRole('button', { name: 'Undo Logged 30 m · Cooking' })).toBeInTheDocument();
+});
+
 test('focus returns to the row after Add', async () => {
   renderIt();
-  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: /^Cooking/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Add' }));
-  expect(screen.getByRole('button', { name: /Cooking/ })).toHaveFocus();
+  expect(screen.getByRole('button', { name: /^Cooking/ })).toHaveFocus();
 });
 
 test('empty state when there are no active chores', () => {
