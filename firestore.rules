@@ -5,6 +5,7 @@ service cloud.firestore {
     function isMember(m) { return m == 'a' || m == 'b'; }
     function validName(s, max) { return s is string && s.size() > 0 && s.size() <= max; }
     function validHours(h) { return h is number && h >= 0.25 && h <= 40; }
+    function validBlock(n) { return n is int && n >= 5 && n <= 240; }
 
     match /households/{code} {
       allow get: if signedIn();
@@ -19,12 +20,13 @@ service cloud.firestore {
       match /chores/{choreId} {
         allow read, delete: if signedIn();
         allow create, update: if signedIn()
-          && request.resource.data.keys().hasOnly(['name', 'hours', 'assignee', 'createdAt', 'archivedAt'])
+          && request.resource.data.keys().hasOnly(['name', 'hours', 'assignee', 'createdAt', 'archivedAt', 'blockMinutes'])
           && validName(request.resource.data.name, 60)
           && validHours(request.resource.data.hours)
           && isMember(request.resource.data.assignee)
           && request.resource.data.createdAt is number
-          && (request.resource.data.archivedAt == null || request.resource.data.archivedAt is number);
+          && (request.resource.data.archivedAt == null || request.resource.data.archivedAt is number)
+          && (!('blockMinutes' in request.resource.data) || validBlock(request.resource.data.blockMinutes));
       }
 
       match /weeks/{weekId} {
@@ -56,6 +58,19 @@ service cloud.firestore {
             && validName(request.resource.data.text, 280)
             && request.resource.data.createdAt is number
             && request.resource.data.resolved is bool;
+        }
+
+        match /logs/{logId} {
+          allow read, delete: if signedIn();
+          allow create: if signedIn()
+            && request.resource.data.keys().hasOnly(['choreId', 'name', 'by', 'multiplier', 'minutes', 'day', 'createdAt'])
+            && request.resource.data.choreId is string && request.resource.data.choreId.size() > 0 && request.resource.data.choreId.size() <= 100
+            && validName(request.resource.data.name, 60)
+            && isMember(request.resource.data.by)
+            && request.resource.data.multiplier in [1, 2, 3]
+            && request.resource.data.minutes is int && request.resource.data.minutes >= 5 && request.resource.data.minutes <= 720
+            && request.resource.data.day is string && request.resource.data.day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && request.resource.data.createdAt is number;
         }
       }
     }

@@ -1,4 +1,4 @@
-import type { Chore, Completion, Feedback, Members } from './types';
+import type { Chore, ChoreLog, Completion, Feedback, Members } from './types';
 import { PERCENTS } from './types';
 import { isValidCode } from './householdCode';
 
@@ -8,7 +8,7 @@ export interface Backup {
   code: string;
   members: Members;
   chores: Chore[];
-  weeks: Record<string, { completions: Completion[]; feedback: Feedback[] }>;
+  weeks: Record<string, { completions: Completion[]; feedback: Feedback[]; logs?: ChoreLog[] }>;
 }
 
 type R = { ok: true; backup: Backup } | { ok: false; error: string };
@@ -22,7 +22,8 @@ const isHours = (x: unknown) => isNum(x) && (x as number) >= 0.25 && (x as numbe
 
 const validChore = (c: unknown) =>
   isObj(c) && isId(c.id) && isStr(c.name, 60) && isHours(c.hours) && isMember(c.assignee) &&
-  isNum(c.createdAt) && (c.archivedAt === null || isNum(c.archivedAt));
+  isNum(c.createdAt) && (c.archivedAt === null || isNum(c.archivedAt)) &&
+  (c.blockMinutes === undefined || (Number.isInteger(c.blockMinutes) && (c.blockMinutes as number) >= 5 && (c.blockMinutes as number) <= 240 && (c.blockMinutes as number) % 5 === 0));
 
 const validCompletion = (c: unknown) =>
   isObj(c) && isId(c.choreId) && PERCENTS.includes(c.percent as never) && isStr(c.name, 60) &&
@@ -32,6 +33,11 @@ const validFeedback = (f: unknown) =>
   isObj(f) && isId(f.id) && isMember(f.from) && isMember(f.to) && f.from !== f.to &&
   (f.kind === 'plus' || f.kind === 'minus') && isStr(f.text, 280) && isNum(f.createdAt) &&
   typeof f.resolved === 'boolean';
+
+const validLog = (l: unknown) =>
+  isObj(l) && isId(l.id) && isId(l.choreId) && isStr(l.name, 60) && isMember(l.by) &&
+  [1, 2, 3].includes(l.multiplier as number) && Number.isInteger(l.minutes) && (l.minutes as number) >= 5 && (l.minutes as number) <= 720 &&
+  typeof l.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(l.day) && isNum(l.createdAt);
 
 export function validateBackup(x: unknown): R {
   const fail = (error: string): R => ({ ok: false, error });
@@ -48,6 +54,7 @@ export function validateBackup(x: unknown): R {
     if (!isObj(w) || !Array.isArray(w.completions) || !Array.isArray(w.feedback)) return fail(`Week ${weekId} is malformed.`);
     if (!w.completions.every(validCompletion)) return fail(`Week ${weekId} has an invalid completion.`);
     if (!w.feedback.every(validFeedback)) return fail(`Week ${weekId} has invalid feedback.`);
+    if (w.logs !== undefined && (!Array.isArray(w.logs) || !w.logs.every(validLog))) return fail(`Week ${weekId} has an invalid chore log.`);
   }
   return { ok: true, backup: x as unknown as Backup };
 }
