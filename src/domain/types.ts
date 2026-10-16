@@ -54,3 +54,34 @@ export interface ChoreLog {
   day: string;        // device-local YYYY-MM-DD
   createdAt: number;
 }
+
+export type BudgetOwner = MemberId | 'shared';
+
+export interface Budget {
+  id: string;
+  name: string;
+  owner: BudgetOwner;
+  monthlyAmount: number; // pence
+  penalty: boolean;      // phase 4: missed-day penalty applies
+  order: number;
+  createdAt: number;
+  archivedAt: number | null;
+}
+
+export type MoneyKind = 'purchase' | 'nothing';
+
+export interface MoneyEntry {
+  id: string;
+  budgetId: string;
+  by: MemberId;
+  day: string;     // YYYY-MM-DD in the household time zone
+  amount: number;  // pence; 0 for 'nothing'
+  label: string;   // '' when not given
+  kind: MoneyKind;
+  createdAt: number;
+}
+
+export interface MoneySettings {
+  timeZone: string;
+  currency: 'GBP';
+}
