@@ -57,6 +57,10 @@ const validMoneySettings = (s: unknown) =>
 export const planLogWrites = (backupLogPaths: string[], existingPaths: Set<string>): string[] =>
   backupLogPaths.filter((p) => !existingPaths.has(p));
 
+/** Docs to delete after an import. Settings and budgets are never deleted (the rules forbid it); import only sets them. */
+export const stalePaths = (existing: string[], keep: Set<string>): string[] =>
+  existing.filter((p) => !keep.has(p) && !/\/(settings|budgets)\//.test(p));
+
 export function validateBackup(x: unknown): R {
   const fail = (error: string): R => ({ ok: false, error });
   if (!isObj(x)) return fail('Not a backup file.');

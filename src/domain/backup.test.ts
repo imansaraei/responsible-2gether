@@ -1,4 +1,4 @@
-import { planLogWrites, validateBackup, type Backup } from './backup';
+import { planLogWrites, stalePaths, validateBackup, type Backup } from './backup';
 
 const good: Backup = {
   version: 1,
@@ -81,4 +81,9 @@ test.each([
   const m = JSON.parse(JSON.stringify(moneySection));
   mutate(m);
   expect(validateBackup({ ...JSON.parse(JSON.stringify(good)), money: m }).ok).toBe(false);
+});
+
+test('stalePaths deletes unkept docs but never settings or budgets', () => {
+  const existing = ['households/c/chores/old', 'households/c/money/m1', 'households/c/money/m2', 'households/c/settings/app', 'households/c/budgets/home'];
+  expect(stalePaths(existing, new Set(['households/c/money/m1']))).toEqual(['households/c/chores/old', 'households/c/money/m2']);
 });

@@ -7,7 +7,7 @@ import { track } from './pending';
 import type { Budget, Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, MoneyEntry, MoneyKind, MoneySettings, Multiplier, Percent } from '../domain/types';
 import { other } from '../domain/types';
 import { legacyHoursFor } from '../domain/blocks';
-import { planLogWrites, type Backup } from '../domain/backup';
+import { planLogWrites, stalePaths, type Backup } from '../domain/backup';
 import { STARTER_CHORES, starterAssignee } from '../domain/starterChores';
 
 const hh = (db: Firestore, code: string) => doc(db, 'households', code);
@@ -129,7 +129,7 @@ export async function addMoneyEntry(
   await ensureSignedIn();
   await track(setDoc(doc(moneyCol(getDb(), code), id), {
     budgetId: input.budgetId, by: input.by, day: input.day, amount: input.amount,
-    label: input.label.trim().slice(0, 40), kind: input.kind, createdAt: Date.now(),
+    label: Array.from(input.label.trim()).slice(0, 40).join(''), kind: input.kind, createdAt: Date.now(),
   }));
 }
 
@@ -228,11 +228,8 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
     existing.push(w.ref);
   }
 
-  // Old backups have no money section: leave Pocket Money data untouched (not scanned, so never deleted).
+  // Old backups have no money section: leave Pocket Money data untouched. Settings and budgets are never scanned (the rules forbid deleting them).
   if (backup.money) {
-    const sd = await getDocFromServer(settingsDoc(db, code));
-    if (sd.exists()) existing.push(sd.ref);
-    (await getDocsFromServer(budgetsCol(db, code))).docs.forEach((d) => existing.push(d.ref));
     (await getDocsFromServer(moneyCol(db, code))).docs.forEach((d) => existing.push(d.ref));
   }
 
@@ -295,5 +292,6 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
   }
 
   await commitInChunks(db, sets);
-  await commitInChunks(db, existing.filter((r) => !keep.has(r.path)).map((ref) => ({ ref })));
+  const stale = new Set(stalePaths(existing.map((r) => r.path), keep));
+  await commitInChunks(db, existing.filter((r) => stale.has(r.path)).map((ref) => ({ ref })));
 }
