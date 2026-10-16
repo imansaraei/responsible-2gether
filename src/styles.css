@@ -141,7 +141,7 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .home-head { margin-bottom: 12px; }
 .home-head h1 { margin: 0; }
 .home-head p { margin: 2px 0 0; }
-.notice-action { display: block; width: 100%; text-align: start; border: 0; font: inherit; cursor: pointer; min-height: 44px; }
+.notice-action { display: block; width: 100%; text-align: start; border: 0; font-family: inherit; line-height: inherit; cursor: pointer; min-height: 44px; }
 .home-actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 8px 0 16px; }
 .home-actions .btn.big { min-height: 52px; }
 .module-card { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: start; font: inherit; color: var(--text); cursor: pointer; margin-bottom: 12px; }

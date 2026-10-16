@@ -8,7 +8,7 @@ import type { NavTarget } from '../navigation';
 
 export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
   const { code, me, members, chores, currentWeekId, device } = useHousehold();
-  const { completions, feedback } = useWeek(code, currentWeekId);
+  const { completions, feedback, loading } = useWeek(code, currentWeekId);
   const partner = other(me);
 
   const views = choresForWeek(currentWeekId, chores, completions, true);
@@ -24,7 +24,7 @@ export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
         <p className="muted">Hi {members[me].name}</p>
       </header>
 
-      {toActOn > 0 && (
+      {!loading && toActOn > 0 && (
         <button className="notice notice-action" onClick={() => onNavigate({ tab: 'chores', section: 'todo' })}>
           {toActOn} feedback note{toActOn === 1 ? '' : 's'} to act on ›
         </button>
@@ -43,12 +43,14 @@ export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
 
       <button className="card module-card" onClick={() => onNavigate({ tab: 'chores', section: 'week' })}>
         <span className="module-card-title">🧺 Tidy Together <span aria-hidden="true">›</span></span>
-        {done === 0 ? (
+        {loading ? (
+          <span className="muted">Loading…</span>
+        ) : done === 0 ? (
           <span className="muted">Nothing logged yet this week</span>
         ) : (
           <>
             <span>{split}</span>
-            <span className="split-bar" role="img" aria-label={`You ${pct[me]}%, ${members[partner].name} ${pct[partner]}%`}>
+            <span className="split-bar" aria-hidden="true">
               <span style={{ width: `${pct[me]}%`, background: memberColor(me) }} />
               <span style={{ width: `${pct[partner]}%`, background: memberColor(partner) }} />
             </span>

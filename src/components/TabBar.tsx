@@ -2,7 +2,6 @@ import type { ReactElement } from 'react';
 import type { TabId } from '../navigation';
 import { IconBasket, IconGear, IconHome, IconWallet } from './icons';
 
-export type { TabId } from '../navigation';
 
 export const TABS: { id: TabId; label: string; icon: () => ReactElement }[] = [
   { id: 'home', label: 'Home', icon: IconHome },

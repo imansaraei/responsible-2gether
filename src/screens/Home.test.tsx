@@ -6,7 +6,8 @@ import { Home } from './Home';
 
 let completions: Completion[] = [];
 let feedback: Feedback[] = [];
-vi.mock('../firebase/hooks', () => ({ useWeek: () => ({ loading: false, completions, feedback }) }));
+let loading = false;
+vi.mock('../firebase/hooks', () => ({ useWeek: () => ({ loading, completions, feedback }) }));
 
 const ctx = (over: Partial<HouseholdCtx> = {}): HouseholdCtx => ({
   code: 'tidy-otter-maple-4821', me: 'a', currentWeekId: '2026-W42',
@@ -24,7 +25,7 @@ const renderHome = (onNavigate = vi.fn(), over: Partial<HouseholdCtx> = {}) => {
   return onNavigate;
 };
 
-beforeEach(() => { completions = []; feedback = []; });
+beforeEach(() => { completions = []; feedback = []; loading = false; });
 
 test('greets the person on this phone under the Khooneh title', () => {
   renderHome();
@@ -39,7 +40,8 @@ test('Tidy Together card shows this week’s split with "You" first', () => {
   ];
   renderHome();
   expect(screen.getByText('You 60% · Tahereh 40%')).toBeInTheDocument();
-  expect(screen.getByRole('img', { name: 'You 60%, Tahereh 40%' })).toBeInTheDocument();
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  expect(document.querySelector('.split-bar')).toHaveAttribute('aria-hidden', 'true');
 });
 
 test('Tidy Together card says nothing logged when the week is empty', () => {
@@ -90,4 +92,13 @@ test('backup reminder appears on Home when an export is overdue and opens Settin
   const nav = renderHome(vi.fn(), { device: { code: 'tidy-otter-maple-4821', me: 'a', lastExportAt: null } });
   await userEvent.click(screen.getByRole('button', { name: 'Back up your data ›' }));
   expect(nav).toHaveBeenLastCalledWith({ tab: 'settings' });
+});
+
+test('while the week is loading, the card shows Loading… and no feedback alert', () => {
+  loading = true;
+  feedback = [{ id: 'f1', from: 'b', to: 'a', kind: 'minus', text: 'Plates', createdAt: 1, resolved: false }];
+  renderHome();
+  expect(screen.getByText('Loading…')).toBeInTheDocument();
+  expect(screen.queryByText('Nothing logged yet this week')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /feedback note/ })).not.toBeInTheDocument();
 });
