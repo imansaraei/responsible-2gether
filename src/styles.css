@@ -162,11 +162,12 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .chore-unit { flex: none; }
 
 .sheet-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / .35); display: flex; align-items: flex-end; justify-content: center; z-index: 30; }
-.sheet { width: 100%; max-width: 560px; background: var(--surface); color: var(--text); border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -8px 30px rgb(0 0 0 / .2); }
+.sheet { width: 100%; max-width: 560px; background: var(--surface); color: var(--text); border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -8px 30px rgb(0 0 0 / .2); max-height: 100dvh; overflow-y: auto; overscroll-behavior: contain; }
+.sheet input { min-height: 44px; }
 .sheet h2 { margin: 0; }
 .amount-field { display: flex; align-items: center; gap: 6px; font-size: 1.6rem; font-weight: 700; color: var(--text); }
 .amount-field input { flex: 1; min-width: 0; font-size: 1.6rem; font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { min-height: 36px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; cursor: pointer; }
+.chip { min-height: 44px; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; cursor: pointer; }
 .sheet-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
 .sheet-actions .btn { min-height: 48px; }

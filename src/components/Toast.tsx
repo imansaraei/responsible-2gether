@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export function useToast(ms = 4000) {
-  const [toast, setToast] = useState<string | null>(null);
+  const [item, setItem] = useState<{ text: string; id: number } | null>(null);
   useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), ms);
+    if (!item) return;
+    const t = setTimeout(() => setItem(null), ms);
     return () => clearTimeout(t);
-  }, [toast, ms]);
-  const show = useCallback((text: string) => setToast(text), []);
-  return { toast, show };
+  }, [item, ms]);
+  const show = useCallback((text: string) => setItem((p) => ({ text, id: (p?.id ?? 0) + 1 })), []);
+  return { toast: item?.text ?? null, show };
 }
 
 /** Always mounted so screen readers announce changes. */

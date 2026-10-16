@@ -21,7 +21,9 @@ export function PurchaseSheet({ open, source = 'mine', onClose, onSaved }: {
   useEffect(() => {
     if (!open) return;
     setAmountText(''); setLabel(''); setFrom(source);
-    requestAnimationFrame(() => amountRef.current?.focus());
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const raf = requestAnimationFrame(() => amountRef.current?.focus());
+    return () => { cancelAnimationFrame(raf); opener?.focus?.(); };
   }, [open, source]);
 
   useEffect(() => {
@@ -49,7 +51,8 @@ export function PurchaseSheet({ open, source = 'mine', onClose, onSaved }: {
   function save(e: FormEvent) {
     e.preventDefault();
     if (amount === null || !budget) return;
-    void addMoneyEntry(code, { budgetId: budget.id, by: me, day: today, amount, label, kind: 'purchase' }, crypto.randomUUID());
+    void addMoneyEntry(code, { budgetId: budget.id, by: me, day: today, amount, label, kind: 'purchase' }, crypto.randomUUID())
+      .catch((err) => console.error(err));
     onSaved(`${formatGBP(amount)} — ${preview(amount)}`);
     onClose();
   }
