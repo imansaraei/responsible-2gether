@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
 import { onPendingChange, pendingWrites } from './pending';
@@ -115,9 +115,11 @@ export function useMoney(code: string, monthKey: string) {
   const [loading, setLoading] = useState(true);
   const [fromCache, setFromCache] = useState(true);
   const [error, setError] = useState(false);
+  const subscribedCode = useRef<string | null>(null);
   useEffect(() => {
     if (!ready) return;
-    setLoading(true);
+    // Only a new household shows Loading…; a month rollover keeps the previous month's data (and any open sheet) until the new snapshot arrives.
+    if (subscribedCode.current !== code) { setLoading(true); subscribedCode.current = code; }
     setError(false);
     const seen = { settings: false, budgets: false, entries: false };
     const settle = () => { if (seen.settings && seen.budgets && seen.entries) setLoading(false); };
