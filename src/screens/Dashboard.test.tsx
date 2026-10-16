@@ -56,4 +56,27 @@ test('blocks week: minutes per person, chore legend in minutes, logged total in 
 test('legacy week: percent-era week shown as minutes of planned', () => {
   render(<HouseholdContext.Provider value={ctx}><Dashboard /></HouseholdContext.Provider>);
   expect(screen.getByText(/Rated with percentages/)).toBeInTheDocument();
+  expect(screen.getByText('of 8 h')).toBeInTheDocument();      // planned 7 h + 1 h
+  expect(screen.getAllByText('7 h').length).toBeGreaterThanOrEqual(2); // centre done + Cooking legend
+  expect(screen.getByText('7 h done')).toBeInTheDocument();   // Iman footer
+});
+
+test('empty week: nothing logged, no legacy note', () => {
+  weekData = { completions: [], feedback: [], logs: [] };
+  render(<HouseholdContext.Provider value={ctx}><Dashboard /></HouseholdContext.Provider>);
+  expect(screen.getByText('Nothing logged yet')).toBeInTheDocument();
+  expect(screen.queryByText(/Rated with percentages/)).toBeNull();
+});
+
+test('blocks week: member footers read logged minutes', () => {
+  weekData = {
+    completions: [], feedback: [],
+    logs: [
+      { id: 'l1', choreId: 'c1', name: 'Cooking', by: 'a', multiplier: 2, minutes: 90, day: '2026-10-13', createdAt: 1 },
+      { id: 'l2', choreId: 'c2', name: 'Trash', by: 'b', multiplier: 1, minutes: 30, day: '2026-10-14', createdAt: 2 },
+    ],
+  };
+  render(<HouseholdContext.Provider value={ctx}><Dashboard /></HouseholdContext.Provider>);
+  expect(screen.getByText('1 h 30 m logged')).toBeInTheDocument();
+  expect(screen.getByText('30 m logged')).toBeInTheDocument();
 });
