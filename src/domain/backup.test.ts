@@ -58,3 +58,27 @@ test('planLogWrites skips logs that already exist (immutable) and keeps all path
   expect(planLogWrites(['w/logs/a', 'w/logs/b'], new Set(['w/logs/a']))).toEqual(['w/logs/b']);
   expect(planLogWrites(['w/logs/a'], new Set())).toEqual(['w/logs/a']);
 });
+
+const moneySection = {
+  settings: { timeZone: 'Europe/London', currency: 'GBP' },
+  budgets: [{ id: 'personal-b', name: 'Tahereh', owner: 'b', monthlyAmount: 25000, penalty: true, order: 1, createdAt: 1, archivedAt: null }],
+  entries: [{ id: 'm1', budgetId: 'personal-b', by: 'b', day: '2026-10-16', amount: 500, label: 'Coffee', kind: 'purchase', createdAt: 2 }],
+};
+
+test('accepts an optional money section', () => {
+  expect(validateBackup(JSON.parse(JSON.stringify({ ...good, money: moneySection }))).ok).toBe(true);
+  expect(validateBackup(JSON.parse(JSON.stringify({ ...good, money: { ...moneySection, settings: null } }))).ok).toBe(true);
+});
+
+test.each([
+  ['budget owner', (m: any) => { m.budgets[0].owner = 'c'; }],
+  ['fractional pence', (m: any) => { m.entries[0].amount = 5.5; }],
+  ['nothing with amount', (m: any) => { m.entries[0].kind = 'nothing'; }],
+  ['bad day', (m: any) => { m.entries[0].day = 'today'; }],
+  ['long label', (m: any) => { m.entries[0].label = 'x'.repeat(41); }],
+  ['currency', (m: any) => { m.settings.currency = 'USD'; }],
+])('rejects a money section with bad %s', (_l, mutate) => {
+  const m = JSON.parse(JSON.stringify(moneySection));
+  mutate(m);
+  expect(validateBackup({ ...JSON.parse(JSON.stringify(good)), money: m }).ok).toBe(false);
+});
