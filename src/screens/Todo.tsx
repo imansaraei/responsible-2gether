@@ -3,6 +3,7 @@ import { useWeek } from '../firebase/hooks';
 import { setFeedbackResolved } from '../firebase/repo';
 import { other } from '../domain/types';
 import { ChoreLogger } from '../components/ChoreLogger';
+import { TodayLogs } from '../components/TodayLogs';
 
 const when = (ms: number) => new Date(ms).toLocaleDateString(undefined, { weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -16,6 +17,8 @@ export function Todo() {
       <h1>To-do</h1>
       <h2>Log a chore</h2>
       <ChoreLogger logs={logs} />
+
+      <TodayLogs logs={logs} />
 
       <h2>Feedback to act on</h2>
       {tasks.length === 0 ? <p className="muted">Nothing from {members[other(me)].name} this week.</p> : (
