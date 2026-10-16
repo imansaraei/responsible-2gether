@@ -14,6 +14,7 @@ export function MoneySetup() {
   const [b, setB] = useState(plain(defaultAllowanceFor(members.b.name)));
   const [home, setHome] = useState(plain(DEFAULT_HOME_ALLOWANCE));
   const [started, setStarted] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
   const pa = parseAmount(a), pb = parseAmount(b), ph = parseAmount(home);
   const valid = pa !== null && pb !== null && ph !== null;
   const bad = (t: string, p: number | null) => t.trim() !== '' && p === null;
@@ -23,9 +24,16 @@ export function MoneySetup() {
     e.preventDefault();
     if (!valid || started || budgets.length > 0) return;
     setStarted(true);
+    setFailure(null);
     setupPocketMoney(code, {
       timeZone, personal: { a: pa, b: pb }, home: ph, names: { a: members.a.name, b: members.b.name },
-    }).catch((err) => { console.error(err); setStarted(false); });
+    }).catch((err: unknown) => {
+      console.error(err);
+      setFailure(err instanceof Error && err.message === 'already-set-up'
+        ? 'Pocket Money is already set up on another phone.'
+        : 'Couldn’t set up — check your connection.');
+      setStarted(false);
+    });
   }
 
   return (
@@ -44,6 +52,7 @@ export function MoneySetup() {
         </label>
         {showError && <p className="error small">Enter an amount like 250</p>}
         <p className="muted small">Days follow {timeZone} time.</p>
+        {failure && <p className="error small" role="alert">{failure}</p>}
         <button className="btn primary big" disabled={!valid || started}>Start Pocket Money</button>
       </form>
     </main>

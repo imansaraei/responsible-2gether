@@ -11,12 +11,20 @@ const SECTION_SCREENS: Record<MoneySection, () => ReactElement | null> = {
 };
 
 export function MoneyModule({ section, onSection }: { section: MoneySection; onSection(s: MoneySection): void }) {
-  const { loading, isSetUp, budgets } = usePocketMoney();
+  const { loading, confirmed, isSetUp, budgets } = usePocketMoney();
   const Screen = SECTION_SCREENS[section];
   const index = MONEY_SECTIONS.findIndex((s) => s.id === section);
 
   if (loading) return <main className="page narrow"><p className="muted">Loading…</p></main>;
-  if (!isSetUp && budgets.length === 0) return <MoneySetup />;
+  if (!isSetUp && budgets.length === 0) {
+    if (confirmed) return <MoneySetup />;
+    return (
+      <main className="page narrow">
+        <h1>👛 Pocket Money</h1>
+        <div className="card"><p className="muted">Connect to the internet to set up Pocket Money.</p></div>
+      </main>
+    );
+  }
 
   function onKeyDown(e: KeyboardEvent) {
     let nextIndex: number;

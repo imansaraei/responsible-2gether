@@ -32,6 +32,21 @@ test('Start Pocket Money saves the edited amounts once', async () => {
   expect(setupPocketMoney).toHaveBeenCalledTimes(1);
 });
 
+test('an already-set-up rejection shows an alert and re-enables the button', async () => {
+  setupPocketMoney.mockRejectedValueOnce(new Error('already-set-up'));
+  view();
+  await userEvent.click(screen.getByRole('button', { name: 'Start Pocket Money' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Pocket Money is already set up on another phone.');
+  expect(screen.getByRole('button', { name: 'Start Pocket Money' })).toBeEnabled();
+});
+
+test('any other rejection shows the connection message', async () => {
+  setupPocketMoney.mockRejectedValueOnce(new Error('unavailable'));
+  view();
+  await userEvent.click(screen.getByRole('button', { name: 'Start Pocket Money' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t set up — check your connection.');
+});
+
 test('an invalid amount disables the button', async () => {
   view();
   const iman = screen.getByLabelText('Iman’s monthly allowance');

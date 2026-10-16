@@ -5,6 +5,8 @@ import type { Budget, BudgetOwner, MoneyEntry } from '../domain/types';
 
 export interface PocketMoneyCtx {
   loading: boolean;
+  /** True only once the server has confirmed the data: not loading, not from the offline cache, no listener error. */
+  confirmed: boolean;
   isSetUp: boolean;
   timeZone: string;
   today: string;
@@ -41,17 +43,18 @@ function safeZone(tz: string | undefined): string {
 
 export function PocketMoneyProvider({ code, children }: { code: string; children: ReactNode }) {
   const [monthKey, setMonthKey] = useState(() => monthKeyOf(dayKeyIn(new Date(), FALLBACK_TIME_ZONE)));
-  const { settings, budgets, entries, loading } = useMoney(code, monthKey);
+  const { settings, budgets, entries, loading, fromCache, error } = useMoney(code, monthKey);
   const timeZone = safeZone(settings?.timeZone);
   const today = useToday(timeZone);
   useEffect(() => { if (monthKeyOf(today) !== monthKey) setMonthKey(monthKeyOf(today)); }, [today, monthKey]);
 
   const value = useMemo<PocketMoneyCtx>(() => ({
     loading,
+    confirmed: !loading && !fromCache && !error,
     isSetUp: settings !== null && budgets.length > 0,
     timeZone, today, budgets, entries,
     budgetFor: (owner) => budgets.find((b) => b.owner === owner),
-  }), [loading, settings, budgets, entries, timeZone, today]);
+  }), [loading, fromCache, error, settings, budgets, entries, timeZone, today]);
 
   return <PocketMoneyContext.Provider value={value}>{children}</PocketMoneyContext.Provider>;
 }

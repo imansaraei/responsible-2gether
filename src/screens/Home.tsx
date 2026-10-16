@@ -102,7 +102,7 @@ export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
         {pm.loading ? (
           <span className="muted">Loading…</span>
         ) : !pm.isSetUp ? (
-          <span className="muted">Set up your allowances</span>
+          <span className="muted">{pm.confirmed ? 'Set up your allowances' : 'Connect to set up'}</span>
         ) : (
           <>
             <span>You {monthLeftOf(myBudget)} left</span>

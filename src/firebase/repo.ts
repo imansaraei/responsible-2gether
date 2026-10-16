@@ -1,5 +1,5 @@
 import {
-  collection, deleteDoc, doc, getDocFromServer, getDocsFromServer, setDoc, updateDoc, writeBatch,
+  collection, deleteDoc, doc, getDocFromServer, getDocsFromServer, runTransaction, setDoc, updateDoc, writeBatch,
   type DocumentReference, type Firestore,
 } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
@@ -112,12 +112,21 @@ export async function setupPocketMoney(
   await ensureSignedIn();
   const db = getDb();
   const now = Date.now();
-  const batch = writeBatch(db);
-  batch.set(settingsDoc(db, code), { timeZone: input.timeZone, currency: 'GBP' });
-  batch.set(doc(budgetsCol(db, code), 'personal-a'), { name: input.names.a.slice(0, 30), owner: 'a', monthlyAmount: input.personal.a, penalty: true, order: 0, createdAt: now, archivedAt: null });
-  batch.set(doc(budgetsCol(db, code), 'personal-b'), { name: input.names.b.slice(0, 30), owner: 'b', monthlyAmount: input.personal.b, penalty: true, order: 1, createdAt: now, archivedAt: null });
-  batch.set(doc(budgetsCol(db, code), 'home'), { name: 'Home', owner: 'shared', monthlyAmount: input.home, penalty: false, order: 2, createdAt: now, archivedAt: null });
-  await track(batch.commit());
+  const refs = {
+    settings: settingsDoc(db, code),
+    a: doc(budgetsCol(db, code), 'personal-a'),
+    b: doc(budgetsCol(db, code), 'personal-b'),
+    home: doc(budgetsCol(db, code), 'home'),
+  };
+  // A transaction reads first, so a stale or offline phone can never overwrite allowances that already exist. It fails offline, which is intended.
+  await track(runTransaction(db, async (tx) => {
+    const snaps = await Promise.all(Object.values(refs).map((r) => tx.get(r)));
+    if (snaps.some((s) => s.exists())) throw new Error('already-set-up');
+    tx.set(refs.settings, { timeZone: input.timeZone, currency: 'GBP' });
+    tx.set(refs.a, { name: input.names.a.slice(0, 30), owner: 'a', monthlyAmount: input.personal.a, penalty: true, order: 0, createdAt: now, archivedAt: null });
+    tx.set(refs.b, { name: input.names.b.slice(0, 30), owner: 'b', monthlyAmount: input.personal.b, penalty: true, order: 1, createdAt: now, archivedAt: null });
+    tx.set(refs.home, { name: 'Home', owner: 'shared', monthlyAmount: input.home, penalty: false, order: 2, createdAt: now, archivedAt: null });
+  }));
 }
 
 /** `id` lets the caller show the entry and delete it before the server acknowledges the write. */

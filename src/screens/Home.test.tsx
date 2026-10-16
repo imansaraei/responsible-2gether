@@ -10,7 +10,7 @@ import { Home } from './Home';
 
 vi.mock('../firebase/repo', () => ({ addMoneyEntry: vi.fn(async () => {}) }));
 const notSetUp: PocketMoneyCtx = {
-  loading: false, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [],
+  loading: false, confirmed: true, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [],
   budgetFor: () => undefined,
 };
 let money: PocketMoneyCtx = notSetUp;
@@ -76,6 +76,13 @@ test('not set up: Pocket Money card offers setup and opens Money', async () => {
   expect(screen.getByRole('button', { name: /Pocket Money/ })).toHaveTextContent('Set up your allowances');
   expect(nav).toHaveBeenLastCalledWith({ tab: 'money' });
   expect(screen.queryByText(/left today/)).toBeNull();
+});
+
+test('unconfirmed and empty: card says Connect to set up, not the setup prompt', () => {
+  money = { ...notSetUp, confirmed: false };
+  renderHome();
+  expect(screen.getByRole('button', { name: /Pocket Money/ })).toHaveTextContent('Connect to set up');
+  expect(screen.queryByText('Set up your allowances')).toBeNull();
 });
 
 test('while money is loading the card shows Loading…, not the setup prompt', () => {

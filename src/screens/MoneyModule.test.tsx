@@ -19,6 +19,13 @@ test('not set up shows setup and no tabs', () => {
   expect(screen.queryByRole('tab')).toBeNull();
 });
 
+test('unconfirmed and empty shows the connect message and no setup form', () => {
+  view('mine', money({ confirmed: false, isSetUp: false, budgets: [] }));
+  expect(screen.getByText('Connect to the internet to set up Pocket Money.')).toBeInTheDocument();
+  expect(screen.queryByText('setup screen')).toBeNull();
+  expect(screen.queryByRole('tab')).toBeNull();
+});
+
 test('loading shows Loading…', () => {
   view('mine', money({ loading: true, isSetUp: false, budgets: [] }));
   expect(screen.getByText('Loading…')).toBeInTheDocument();
