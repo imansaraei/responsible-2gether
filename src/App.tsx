@@ -1,21 +1,19 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isConfigured } from './firebase/config';
 import { useChores, useHouseholdDoc, useSyncStatus } from './firebase/hooks';
 import { loadDevice, saveDevice, type DeviceState } from './device';
 import { weekIdOf } from './domain/week';
 import { HouseholdContext, type HouseholdCtx } from './state/HouseholdContext';
 import { OfflinePill } from './components/OfflinePill';
-import { TabBar, type TabId } from './components/TabBar';
+import { TabBar } from './components/TabBar';
 import { SetupNeeded } from './screens/SetupNeeded';
 import { Onboarding, WhoAreYou } from './screens/Onboarding';
+import { ChoresModule } from './screens/ChoresModule';
+import { MoneySoon } from './screens/MoneySoon';
 import { Dashboard } from './screens/Dashboard';
-import { Todo } from './screens/Todo';
-import { Feedback } from './screens/Feedback';
-import { Config } from './screens/Config';
 import { Settings } from './screens/Settings';
 import { syncReminders } from './push/reminders';
-
-const SCREENS: Record<TabId, () => ReactElement> = { config: Config, feedback: Feedback, dashboard: Dashboard, todo: Todo, settings: Settings };
+import type { ChoresSection, NavTarget, TabId } from './navigation';
 
 function useCurrentWeekId(): string {
   const [id, setId] = useState(() => weekIdOf(new Date()));
@@ -43,7 +41,13 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   const { members, loading, error } = useHouseholdDoc(code, attempt);
   const chores = useChores(code);
   const currentWeekId = useCurrentWeekId();
-  const [tab, setTab] = useState<TabId>('dashboard');
+  const [tab, setTab] = useState<TabId>('home');
+  const [choresSection, setChoresSection] = useState<ChoresSection>('week');
+  const navigate = useCallback((t: NavTarget) => {
+    setTab(t.tab);
+    if (t.section) setChoresSection(t.section);
+    window.scrollTo(0, 0);
+  }, []);
   const offline = useSyncStatus(code) === 'offline';
 
   // Keep the reminder server's copy of this device fresh (time zone after travel, rotated subscription).
@@ -77,13 +81,17 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   }
   if (!device.me || !ctx) return <WhoAreYou members={members} onPick={(me) => updateDevice({ me })} />;
 
-  const Screen = SCREENS[tab];
+  const screen =
+    tab === 'chores' ? <ChoresModule section={choresSection} onSection={setChoresSection} />
+    : tab === 'money' ? <MoneySoon />
+    : tab === 'settings' ? <Settings />
+    : <Dashboard />; // replaced by <Home onNavigate={navigate} /> in Task 3
   return (
     <HouseholdContext.Provider value={ctx}>
       <div className={`app${offline ? ' has-pill' : ''}`}>
-        <Screen />
+        {screen}
         <OfflinePill code={code} />
-        <TabBar active={tab} onChange={setTab} />
+        <TabBar active={tab} onChange={(t) => navigate({ tab: t })} />
       </div>
     </HouseholdContext.Provider>
   );

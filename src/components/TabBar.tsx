@@ -1,13 +1,13 @@
 import type { ReactElement } from 'react';
-import { IconCheck, IconChat, IconGear, IconPie, IconSliders } from './icons';
+import type { TabId } from '../navigation';
+import { IconBasket, IconGear, IconHome, IconWallet } from './icons';
 
-export type TabId = 'config' | 'feedback' | 'dashboard' | 'todo' | 'settings';
+export type { TabId } from '../navigation';
 
 export const TABS: { id: TabId; label: string; icon: () => ReactElement }[] = [
-  { id: 'config', label: 'Setup', icon: IconSliders },
-  { id: 'feedback', label: 'Feedback', icon: IconChat },
-  { id: 'dashboard', label: 'Home', icon: IconPie },
-  { id: 'todo', label: 'To-do', icon: IconCheck },
+  { id: 'home', label: 'Home', icon: IconHome },
+  { id: 'chores', label: 'Chores', icon: IconBasket },
+  { id: 'money', label: 'Money', icon: IconWallet },
   { id: 'settings', label: 'Settings', icon: IconGear },
 ];
 
@@ -18,7 +18,7 @@ export function TabBar({ active, onChange }: { active: TabId; onChange: (t: TabI
         <button
           key={id}
           aria-current={active === id ? 'page' : undefined}
-          className={`tab${id === 'dashboard' ? ' tab-center' : ''}`}
+          className={`tab${id === 'home' ? ' tab-center' : ''}`}
           onClick={() => onChange(id)}
         >
           <span className="tab-icon"><Icon /></span>
