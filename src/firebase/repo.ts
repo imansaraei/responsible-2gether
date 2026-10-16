@@ -6,7 +6,6 @@ import { ensureSignedIn, getDb } from './app';
 import { track } from './pending';
 import type { Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, Multiplier, Percent } from '../domain/types';
 import { other } from '../domain/types';
-import type { ChoreView } from '../domain/scoring';
 import { planLogWrites, type Backup } from '../domain/backup';
 import { STARTER_CHORES, starterAssignee } from '../domain/starterChores';
 
@@ -53,17 +52,6 @@ export async function updateChore(code: string, id: string, patch: Partial<Pick<
 export async function archiveChore(code: string, id: string) {
   await ensureSignedIn();
   await track(updateDoc(doc(choresCol(getDb(), code), id), { archivedAt: Date.now() }));
-}
-
-export async function setCompletion(code: string, weekId: string, view: ChoreView, percent: Percent) {
-  await ensureSignedIn();
-  const db = getDb();
-  const batch = writeBatch(db);
-  batch.set(weekDoc(db, code, weekId), { weekId });
-  batch.set(doc(weekDoc(db, code, weekId), 'completions', view.choreId), {
-    percent, name: view.name, hours: view.hours, assignee: view.assignee, updatedAt: Date.now(),
-  });
-  await track(batch.commit());
 }
 
 export async function addFeedback(code: string, weekId: string, input: { from: MemberId; kind: FeedbackKind; text: string }) {
