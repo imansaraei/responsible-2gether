@@ -1,13 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HouseholdContext, type HouseholdCtx } from '../state/HouseholdContext';
-import type { Completion, Feedback } from '../domain/types';
+import type { ChoreLog, Completion, Feedback } from '../domain/types';
 import { Home } from './Home';
 
 let completions: Completion[] = [];
 let feedback: Feedback[] = [];
+let logs: ChoreLog[] = [];
 let loading = false;
-vi.mock('../firebase/hooks', () => ({ useWeek: () => ({ loading, completions, feedback }) }));
+vi.mock('../firebase/hooks', () => ({ useWeek: () => ({ loading, completions, feedback, logs }) }));
 
 const ctx = (over: Partial<HouseholdCtx> = {}): HouseholdCtx => ({
   code: 'tidy-otter-maple-4821', me: 'a', currentWeekId: '2026-W42',
@@ -25,7 +26,7 @@ const renderHome = (onNavigate = vi.fn(), over: Partial<HouseholdCtx> = {}) => {
   return onNavigate;
 };
 
-beforeEach(() => { completions = []; feedback = []; loading = false; });
+beforeEach(() => { logs = []; completions = []; feedback = []; loading = false; });
 
 test('greets the person on this phone under the Khooneh title', () => {
   renderHome();
@@ -101,4 +102,13 @@ test('while the week is loading, the card shows Loading… and no feedback alert
   expect(screen.getByText('Loading…')).toBeInTheDocument();
   expect(screen.queryByText('Nothing logged yet this week')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /feedback note/ })).not.toBeInTheDocument();
+});
+
+test('Tidy Together card uses logged minutes when the week has logs', () => {
+  logs = [
+    { id: 'l1', choreId: 'c1', name: 'Cooking', by: 'a', multiplier: 1, minutes: 45, day: '2026-10-13', createdAt: 1 },
+    { id: 'l2', choreId: 'c2', name: 'Trash', by: 'b', multiplier: 3, minutes: 15, day: '2026-10-13', createdAt: 2 },
+  ];
+  renderHome();
+  expect(screen.getByText('You 75% · Tahereh 25%')).toBeInTheDocument();
 });
