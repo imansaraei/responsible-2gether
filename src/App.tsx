@@ -10,11 +10,11 @@ import { TabBar } from './components/TabBar';
 import { SetupNeeded } from './screens/SetupNeeded';
 import { Onboarding, WhoAreYou } from './screens/Onboarding';
 import { ChoresModule } from './screens/ChoresModule';
-import { MoneySoon } from './screens/MoneySoon';
+import { MoneyModule } from './screens/MoneyModule';
 import { Home } from './screens/Home';
 import { Settings } from './screens/Settings';
 import { syncReminders } from './push/reminders';
-import type { ChoresSection, NavTarget, TabId } from './navigation';
+import type { ChoresSection, MoneySection, NavTarget, TabId } from './navigation';
 
 function useCurrentWeekId(): string {
   const [id, setId] = useState(() => weekIdOf(new Date()));
@@ -44,9 +44,11 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
   const currentWeekId = useCurrentWeekId();
   const [tab, setTab] = useState<TabId>('home');
   const [choresSection, setChoresSection] = useState<ChoresSection>('week');
+  const [moneySection, setMoneySection] = useState<MoneySection>('mine');
   const navigate = useCallback((t: NavTarget) => {
     setTab(t.tab);
     if (t.section) setChoresSection(t.section);
+    if (t.moneySection) setMoneySection(t.moneySection);
     window.scrollTo(0, 0);
   }, []);
   const offline = useSyncStatus(code) === 'offline';
@@ -84,7 +86,7 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
 
   const screen =
     tab === 'chores' ? <ChoresModule section={choresSection} onSection={setChoresSection} />
-    : tab === 'money' ? <MoneySoon />
+    : tab === 'money' ? <MoneyModule section={moneySection} onSection={setMoneySection} />
     : tab === 'settings' ? <Settings />
     : <Home onNavigate={navigate} />;
   return (
