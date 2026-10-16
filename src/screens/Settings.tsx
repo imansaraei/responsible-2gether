@@ -18,7 +18,7 @@ const isAbort = (e: unknown) => errName(e) === 'AbortError';
 export async function saveBackupFile(file: File): Promise<'shared' | 'downloaded' | 'cancelled' | 'needs-tap'> {
   if (navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Responsible 2gether backup' });
+      await navigator.share({ files: [file], title: 'Khooneh backup' });
       return 'shared';
     } catch (e) {
       if (isAbort(e)) return 'cancelled';
@@ -61,9 +61,9 @@ export function Settings() {
   }
 
   async function share() {
-    const text = `Join our Responsible 2gether household: ${link}`;
+    const text = `Join our Khooneh household: ${link}`;
     try {
-      if (navigator.share) await navigator.share({ title: 'Responsible 2gether', text, url: link });
+      if (navigator.share) await navigator.share({ title: 'Khooneh', text, url: link });
       else { await navigator.clipboard.writeText(link); setMsg('Link copied.'); }
     } catch (e) {
       if (!isAbort(e)) setMsg(`Couldn’t share — copy this link: ${link}`);

@@ -15,9 +15,9 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api\//],
       },
       manifest: {
-        name: 'Responsible 2gether',
-        short_name: '2gether',
-        description: 'Keep the home tidy, together.',
+        name: 'Khooneh',
+        short_name: 'Khooneh',
+        description: 'Our home, together: chores and pocket money.',
         theme_color: '#0f766e',
         background_color: '#f7f6f2',
         display: 'standalone',

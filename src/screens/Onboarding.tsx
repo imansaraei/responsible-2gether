@@ -54,7 +54,7 @@ export function Onboarding({ onHousehold }: { onHousehold(code: string): void })
 
   return (
     <main className="page narrow">
-      <h1>Responsible 2gether</h1>
+      <h1>Khooneh</h1>
       <p className="muted">Keep the home tidy, together.</p>
       {step === 'choose' && (
         <div className="stack">

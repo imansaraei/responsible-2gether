@@ -1,7 +1,7 @@
 export function SetupNeeded() {
   return (
     <main className="page narrow">
-      <h1>Responsible 2gether</h1>
+      <h1>Khooneh</h1>
       <div className="card">
         <p><strong>Firebase isn’t configured yet.</strong></p>
         <ol>
