@@ -80,3 +80,14 @@ test('blocks week: member footers read logged minutes', () => {
   expect(screen.getByText('1 h 30 m logged')).toBeInTheDocument();
   expect(screen.getByText('30 m logged')).toBeInTheDocument();
 });
+
+test('mixed week: notes the percentage ratings and labels the total as logged', () => {
+  weekData = {
+    ...legacyData,
+    logs: [{ id: 'l1', choreId: 'c2', name: 'Trash', by: 'b', multiplier: 1, minutes: 30, day: '2026-10-14', createdAt: 2 }],
+  };
+  render(<HouseholdContext.Provider value={ctx}><Dashboard /></HouseholdContext.Provider>);
+  expect(screen.getByText('Includes percentage ratings from before time blocks.')).toBeInTheDocument();
+  expect(screen.getByText('logged this week')).toBeInTheDocument();
+  expect(screen.queryByText(/Rated with percentages/)).toBeNull();
+});

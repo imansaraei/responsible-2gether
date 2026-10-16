@@ -10,9 +10,10 @@ const chores: Chore[] = [
   { id: 'c2', name: 'Trash', hours: 4, assignee: 'b', createdAt: 1, archivedAt: null },
 ];
 
-test('weekMode is legacy only when a week has completions and no logs', () => {
+test('weekMode: legacy for completions only, mixed for both, blocks otherwise', () => {
   expect(weekMode([], [comp({})])).toBe('legacy');
-  expect(weekMode([log({})], [comp({})])).toBe('blocks');
+  expect(weekMode([log({})], [comp({})])).toBe('mixed');
+  expect(weekMode([log({})], [])).toBe('blocks');
   expect(weekMode([], [])).toBe('blocks');
 });
 
@@ -55,4 +56,19 @@ test('summarizeWeek in legacy mode converts hours to minutes and keeps the plan'
   expect(s.planned).toBe(600);
   expect(s.pct).toEqual({ a: 100, b: 0 });
   expect(s.slices.find((x) => x.key === 'notdone')?.value).toBe(420);
+});
+
+test('summarizeWeek in mixed mode combines rated minutes with logged minutes', () => {
+  const s = summarizeWeek('2026-W42', chores, [comp({ choreId: 'c1', percent: 50, hours: 6 })],
+    [log({ by: 'a', minutes: 45 }), log({ by: 'b', choreId: 'c2', name: 'Trash', minutes: 75 })], true);
+  expect(s.mode).toBe('mixed');
+  expect(s.done).toEqual({ a: 225, b: 75, total: 300 });
+  expect(s.pct).toEqual({ a: 75, b: 25 });
+  expect(s.planned).toBeNull();
+  expect(s.slices.find((x) => x.key === 'notdone')).toBeUndefined();
+  const mineA = s.slices.filter((x) => x.member === 'a');
+  expect(mineA.map((x) => x.key)).toEqual(['a:c1', 'rated:c1']);
+  expect(mineA.find((x) => x.key === 'rated:c1')?.value).toBe(180);
+  expect(mineA.map((x) => [x.shadeIndex, x.shadeCount])).toEqual([[0, 2], [1, 2]]);
+  expect(s.slices.find((x) => x.key === 'b:c2')?.shadeCount).toBe(1);
 });

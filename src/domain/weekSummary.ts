@@ -2,11 +2,13 @@ import type { Chore, ChoreLog, Completion, MemberId } from './types';
 import { MEMBER_IDS } from './types';
 import { choresForWeek, donutSlices, memberHours, sharePercents, type DonutSlice } from './scoring';
 
-export type WeekMode = 'blocks' | 'legacy';
+export type WeekMode = 'blocks' | 'legacy' | 'mixed';
 
-// Weeks rated with percentages before blocks existed keep their old view.
-export const weekMode = (logs: ChoreLog[], completions: Completion[]): WeekMode =>
-  logs.length === 0 && completions.length > 0 ? 'legacy' : 'blocks';
+// Weeks rated with percentages before blocks existed keep their ratings: 'mixed' when logs arrive mid-week.
+export const weekMode = (logs: ChoreLog[], completions: Completion[]): WeekMode => {
+  if (completions.length === 0) return 'blocks';
+  return logs.length === 0 ? 'legacy' : 'mixed';
+};
 
 export function memberMinutes(logs: ChoreLog[]) {
   let a = 0, b = 0;
@@ -53,12 +55,30 @@ export interface WeekSummary {
 export function summarizeWeek(
   weekId: string, chores: Chore[], completions: Completion[], logs: ChoreLog[], isCurrent: boolean,
 ): WeekSummary {
-  if (weekMode(logs, completions) === 'blocks') {
+  const mode = weekMode(logs, completions);
+  if (mode === 'blocks') {
     return { mode: 'blocks', slices: blockSlices(logs), pct: minuteShares(logs), done: memberMinutes(logs), planned: null };
   }
   const views = choresForWeek(weekId, chores, completions, isCurrent);
   const h = memberHours(views);
   const toMin = (hours: number) => Math.round(hours * 60);
+  if (mode === 'mixed') {
+    const rated = donutSlices(views)
+      .filter((s) => s.key !== 'notdone')
+      .map((s) => ({ ...s, key: `rated:${s.key}`, value: toMin(s.value) }));
+    const blocks = blockSlices(logs);
+    const slices: DonutSlice[] = [];
+    for (const m of MEMBER_IDS) {
+      const mine = [...blocks.filter((s) => s.member === m), ...rated.filter((s) => s.member === m)];
+      mine.forEach((s, i) => slices.push({ ...s, shadeIndex: i, shadeCount: mine.length }));
+    }
+    const logged = memberMinutes(logs);
+    const a = toMin(h.a) + logged.a;
+    const b = toMin(h.b) + logged.b;
+    const total = a + b;
+    const pa = total === 0 ? 0 : Math.round((a / total) * 100);
+    return { mode, slices, pct: total === 0 ? { a: 0, b: 0 } : { a: pa, b: 100 - pa }, done: { a, b, total }, planned: null };
+  }
   return {
     mode: 'legacy',
     slices: donutSlices(views).map((s) => ({ ...s, value: toMin(s.value) })),

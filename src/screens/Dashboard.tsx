@@ -34,12 +34,16 @@ export function Dashboard() {
         <p className="muted small">Rated with percentages (before time blocks) — shown as estimated minutes.</p>
       )}
 
+      {mode === 'mixed' && (
+        <p className="muted small">Includes percentage ratings from before time blocks.</p>
+      )}
+
       <Donut
         slices={slices}
         ariaLabel={`Chores done, ${formatWeekRange(weekId)}: ${members[order[0]].name} ${pct[order[0]]}%, ${members[order[1]].name} ${pct[order[1]]}%, ${formatMinutes(done.total)}`}
         label={done.total === 0
           ? <span className="muted">Nothing logged yet</span>
-          : mode === 'blocks'
+          : mode !== 'legacy'
             ? <><strong>{formatMinutes(done.total)}</strong><span className="muted small">logged this week</span></>
             : <><strong>{formatMinutes(done.total)}</strong><span className="muted small">of {formatMinutes(planned ?? 0)}</span></>}
       />
@@ -60,7 +64,7 @@ export function Dashboard() {
                 </li>
               ))}
             </ul>
-            <div className="muted small">{formatMinutes(done[m])} {mode === 'blocks' ? 'logged' : 'done'}</div>
+            <div className="muted small">{formatMinutes(done[m])} {mode !== 'legacy' ? 'logged' : 'done'}</div>
           </div>
         ))}
       </div>
