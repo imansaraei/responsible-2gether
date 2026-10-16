@@ -10,7 +10,7 @@ import { SetupNeeded } from './screens/SetupNeeded';
 import { Onboarding, WhoAreYou } from './screens/Onboarding';
 import { ChoresModule } from './screens/ChoresModule';
 import { MoneySoon } from './screens/MoneySoon';
-import { Dashboard } from './screens/Dashboard';
+import { Home } from './screens/Home';
 import { Settings } from './screens/Settings';
 import { syncReminders } from './push/reminders';
 import type { ChoresSection, NavTarget, TabId } from './navigation';
@@ -85,7 +85,7 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
     tab === 'chores' ? <ChoresModule section={choresSection} onSection={setChoresSection} />
     : tab === 'money' ? <MoneySoon />
     : tab === 'settings' ? <Settings />
-    : <Dashboard />; // replaced by <Home onNavigate={navigate} /> in Task 3
+    : <Home onNavigate={navigate} />;
   return (
     <HouseholdContext.Provider value={ctx}>
       <div className={`app${offline ? ' has-pill' : ''}`}>

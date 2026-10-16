@@ -138,3 +138,13 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .segmented-nav button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
 .segmented-nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .module #chores-panel > .page { padding-top: 12px; }
+.home-head { margin-bottom: 12px; }
+.home-head h1 { margin: 0; }
+.home-head p { margin: 2px 0 0; }
+.notice-action { display: block; width: 100%; text-align: start; border: 0; font: inherit; cursor: pointer; min-height: 44px; }
+.home-actions { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 8px 0 16px; }
+.home-actions .btn.big { min-height: 52px; }
+.module-card { display: flex; flex-direction: column; gap: 6px; width: 100%; text-align: start; font: inherit; color: var(--text); cursor: pointer; margin-bottom: 12px; }
+.module-card-title { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.05rem; }
+.split-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--slice-empty); }
+.split-bar > span { display: block; height: 100%; }

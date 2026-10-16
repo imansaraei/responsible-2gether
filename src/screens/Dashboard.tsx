@@ -4,7 +4,6 @@ import { useWeek } from '../firebase/hooks';
 import { choresForWeek, donutSlices, helpfulness, memberHours, sharePercents } from '../domain/scoring';
 import { formatWeekRange, shiftWeek } from '../domain/week';
 import { other } from '../domain/types';
-import { exportReminderDue } from '../device';
 import { Donut } from '../components/Donut';
 import { HelpBar } from '../components/HelpBar';
 import { memberColor, sliceColor } from '../components/colors';
@@ -12,7 +11,7 @@ import { memberColor, sliceColor } from '../components/colors';
 const h = (n: number) => `${Math.round(n * 10) / 10} h`;
 
 export function Dashboard() {
-  const { code, me, members, chores, currentWeekId, device } = useHousehold();
+  const { code, me, members, chores, currentWeekId } = useHousehold();
   const [weekId, setWeekId] = useState(currentWeekId);
   useEffect(() => setWeekId(currentWeekId), [currentWeekId]);
   const isCurrent = weekId === currentWeekId;
@@ -27,9 +26,6 @@ export function Dashboard() {
 
   return (
     <main className="page">
-      {exportReminderDue(device.lastExportAt, Date.now()) && (
-        <p className="notice">Back up your data: Settings › Export.</p>
-      )}
       <div className="weeknav">
         <button className="btn ghost" aria-label="Previous week" onClick={() => setWeekId(shiftWeek(weekId, -1))}>‹</button>
         <div><strong>{isCurrent ? 'This week' : weekId}</strong><div className="muted small">{formatWeekRange(weekId)}</div></div>
