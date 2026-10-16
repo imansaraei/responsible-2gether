@@ -2,7 +2,19 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HouseholdContext, type HouseholdCtx } from '../state/HouseholdContext';
 import type { ChoreLog, Completion, Feedback } from '../domain/types';
+import { PocketMoneyContext, type PocketMoneyCtx } from '../state/PocketMoneyContext';
+import type { MoneyEntry } from '../domain/types';
+import { money as moneyFixture, budgets } from './moneyFixtures';
+import { addMoneyEntry } from '../firebase/repo';
 import { Home } from './Home';
+
+vi.mock('../firebase/repo', () => ({ addMoneyEntry: vi.fn(async () => {}) }));
+const notSetUp: PocketMoneyCtx = {
+  loading: false, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [],
+  budgetFor: () => undefined,
+};
+let money: PocketMoneyCtx = notSetUp;
+const setUpMoney = (entries: MoneyEntry[]): PocketMoneyCtx => moneyFixture({ entries, budgets });
 
 let completions: Completion[] = [];
 let feedback: Feedback[] = [];
@@ -22,11 +34,11 @@ const ctx = (over: Partial<HouseholdCtx> = {}): HouseholdCtx => ({
   ...over,
 });
 const renderHome = (onNavigate = vi.fn(), over: Partial<HouseholdCtx> = {}) => {
-  render(<HouseholdContext.Provider value={ctx(over)}><Home onNavigate={onNavigate} /></HouseholdContext.Provider>);
+  render(<HouseholdContext.Provider value={ctx(over)}><PocketMoneyContext.Provider value={money}><Home onNavigate={onNavigate} /></PocketMoneyContext.Provider></HouseholdContext.Provider>);
   return onNavigate;
 };
 
-beforeEach(() => { logs = []; completions = []; feedback = []; loading = false; });
+beforeEach(() => { money = notSetUp; vi.mocked(addMoneyEntry).mockClear(); vi.mocked(addMoneyEntry).mockImplementation(async () => {}); logs = []; completions = []; feedback = []; loading = false; });
 
 test('greets the person on this phone under the Khooneh title', () => {
   renderHome();
@@ -58,12 +70,60 @@ test('＋ Chore and the Tidy Together card navigate into the chores module', asy
   expect(nav).toHaveBeenLastCalledWith({ tab: 'chores', section: 'week' });
 });
 
-test('Pocket Money card is marked coming soon and opens the Money tab', async () => {
+test('not set up: Pocket Money card offers setup and opens Money', async () => {
   const nav = renderHome();
-  const card = screen.getByRole('button', { name: /Pocket Money/ });
-  expect(card).toHaveTextContent(/Coming soon/);
-  await userEvent.click(card);
+  await userEvent.click(screen.getByRole('button', { name: /Pocket Money/ }));
+  expect(screen.getByRole('button', { name: /Pocket Money/ })).toHaveTextContent('Set up your allowances');
   expect(nav).toHaveBeenLastCalledWith({ tab: 'money' });
+  expect(screen.queryByText(/left today/)).toBeNull();
+});
+
+test('while money is loading the card shows Loading…, not the setup prompt', () => {
+  money = { ...notSetUp, loading: true };
+  renderHome();
+  expect(screen.getByRole('button', { name: /Pocket Money/ })).toHaveTextContent('Loading…');
+  expect(screen.queryByText('Set up your allowances')).toBeNull();
+});
+
+test('set up: today strip shows what is left and the family card shows totals only', async () => {
+  money = setUpMoney([{ id: 'e1', budgetId: 'personal-a', by: 'a', day: '2026-10-16', amount: 500, label: 'Coffee', kind: 'purchase', createdAt: 1 }]);
+  const nav = renderHome();
+  expect(screen.getByText('£1.45')).toBeInTheDocument();
+  expect(screen.getByText('left today')).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'My pocket money today' })).toHaveTextContent(/this week/);
+  const card = screen.getByRole('button', { name: /Pocket Money/ });
+  expect(card).toHaveTextContent('You £195.00 left');
+  expect(card).toHaveTextContent('Tahereh £250.00 left');
+  expect(card).toHaveTextContent('Home £100.00 left');
+  expect(card).not.toHaveTextContent('Coffee');
+  await userEvent.click(card);
+  expect(nav).toHaveBeenLastCalledWith({ tab: 'money', moneySection: 'family' });
+});
+
+test('＋ Purchase opens the sheet; No spending today logs a £0 check-in', async () => {
+  money = setUpMoney([]);
+  renderHome();
+  await userEvent.click(screen.getByRole('button', { name: 'No spending today' }));
+  expect(addMoneyEntry).toHaveBeenCalledWith('tidy-otter-maple-4821',
+    { budgetId: 'personal-a', by: 'a', day: '2026-10-16', amount: 0, label: '', kind: 'nothing' }, expect.any(String));
+  expect(screen.getByRole('status')).toHaveTextContent('Logged: no spending today');
+  await userEvent.click(screen.getByRole('button', { name: '＋ Purchase' }));
+  expect(screen.getByRole('dialog', { name: 'New purchase' })).toBeInTheDocument();
+});
+
+test('No spending today is hidden once something is logged today', () => {
+  money = setUpMoney([{ id: 'e1', budgetId: 'personal-a', by: 'a', day: '2026-10-16', amount: 0, label: '', kind: 'nothing', createdAt: 1 }]);
+  renderHome();
+  expect(screen.queryByRole('button', { name: 'No spending today' })).toBeNull();
+});
+
+test('a failed No spending today write shows an alert', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.mocked(addMoneyEntry).mockRejectedValueOnce(new Error('nope'));
+  money = setUpMoney([]);
+  renderHome();
+  await userEvent.click(screen.getByRole('button', { name: 'No spending today' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Couldn.t log/);
 });
 
 test('unresolved negative feedback for me shows an alert that opens To-do', async () => {

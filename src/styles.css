@@ -189,3 +189,10 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .family-row .big.over { color: var(--danger); }
 .family-row .muted { grid-column: 2 / 4; text-align: end; }
 .module #money-panel > .page { padding-top: 12px; }
+
+.today-strip { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+.today-big { display: flex; align-items: baseline; gap: 8px; }
+.today-big strong { font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.today-big strong.over { color: var(--danger); }
+.home-actions.two { grid-template-columns: 1fr 1fr; }
+.no-spend { min-height: 44px; width: 100%; margin-bottom: 12px; }
