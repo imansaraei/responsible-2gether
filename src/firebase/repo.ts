@@ -7,7 +7,7 @@ import { track } from './pending';
 import type { Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, Multiplier, Percent } from '../domain/types';
 import { other } from '../domain/types';
 import type { ChoreView } from '../domain/scoring';
-import type { Backup } from '../domain/backup';
+import { planLogWrites, type Backup } from '../domain/backup';
 import { STARTER_CHORES, starterAssignee } from '../domain/starterChores';
 
 const hh = (db: Firestore, code: string) => doc(db, 'households', code);
@@ -169,6 +169,17 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
   await ensureSignedIn();
   const db = getDb();
 
+  // Read existing docs before writing so stale ones can be found, but delete only after the sets succeed.
+  const existing: DocumentReference[] = (await getDocsFromServer(choresCol(db, code))).docs.map((d) => d.ref);
+  for (const w of (await getDocsFromServer(collection(db, 'households', code, 'weeks'))).docs) {
+    for (const sub of ['completions', 'feedback', 'logs']) {
+      (await getDocsFromServer(collection(w.ref, sub))).docs.forEach((d) => existing.push(d.ref));
+    }
+    existing.push(w.ref);
+  }
+
+  const existingPaths = new Set(existing.map((r) => r.path));
+
   const sets: Op[] = [{
     ref: hh(db, code),
     data: { members: { a: { name: backup.members.a.name }, b: { name: backup.members.b.name } }, createdAt: Date.now() },
@@ -194,20 +205,16 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
         from: f.from, to: f.to, kind: f.kind, text: f.text, createdAt: f.createdAt, resolved: f.resolved,
       });
     }
-    for (const l of w.logs ?? []) {
-      add(doc(weekDoc(db, code, weekId), 'logs', l.id), {
+    const logs = w.logs ?? [];
+    const logRef = (id: string) => doc(weekDoc(db, code, weekId), 'logs', id);
+    const toWrite = new Set(planLogWrites(logs.map((l) => logRef(l.id).path), existingPaths));
+    for (const l of logs) {
+      const ref = logRef(l.id);
+      if (!toWrite.has(ref.path)) { keep.add(ref.path); continue; }
+      add(ref, {
         choreId: l.choreId, name: l.name, by: l.by, multiplier: l.multiplier, minutes: l.minutes, day: l.day, createdAt: l.createdAt,
       });
     }
-  }
-
-  // Read existing docs before writing so stale ones can be found, but delete only after the sets succeed.
-  const existing: DocumentReference[] = (await getDocsFromServer(choresCol(db, code))).docs.map((d) => d.ref);
-  for (const w of (await getDocsFromServer(collection(db, 'households', code, 'weeks'))).docs) {
-    for (const sub of ['completions', 'feedback', 'logs']) {
-      (await getDocsFromServer(collection(w.ref, sub))).docs.forEach((d) => existing.push(d.ref));
-    }
-    existing.push(w.ref);
   }
 
   await commitInChunks(db, sets);

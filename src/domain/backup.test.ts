@@ -1,4 +1,4 @@
-import { validateBackup, type Backup } from './backup';
+import { planLogWrites, validateBackup, type Backup } from './backup';
 
 const good: Backup = {
   version: 1,
@@ -52,4 +52,9 @@ test.each([
   const b = JSON.parse(JSON.stringify(good));
   mutate(b);
   expect(validateBackup(b).ok).toBe(false);
+});
+
+test('planLogWrites skips logs that already exist (immutable) and keeps all paths', () => {
+  expect(planLogWrites(['w/logs/a', 'w/logs/b'], new Set(['w/logs/a']))).toEqual(['w/logs/b']);
+  expect(planLogWrites(['w/logs/a'], new Set())).toEqual(['w/logs/a']);
 });

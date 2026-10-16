@@ -39,6 +39,10 @@ const validLog = (l: unknown) =>
   [1, 2, 3].includes(l.multiplier as number) && Number.isInteger(l.minutes) && (l.minutes as number) >= 5 && (l.minutes as number) <= 720 &&
   typeof l.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(l.day) && isNum(l.createdAt);
 
+/** Logs are immutable (create-only in the rules), so an existing id already holds the same content: skip re-writing it. */
+export const planLogWrites = (backupLogPaths: string[], existingPaths: Set<string>): string[] =>
+  backupLogPaths.filter((p) => !existingPaths.has(p));
+
 export function validateBackup(x: unknown): R {
   const fail = (error: string): R => ({ ok: false, error });
   if (!isObj(x)) return fail('Not a backup file.');

@@ -65,18 +65,22 @@ export function useWeek(code: string, weekId: string) {
     setFeedback([]);
     setLogs([]);
     const base = ['households', code, 'weeks', weekId] as const;
+    const seen = { completions: false, logs: false };
+    const settle = () => { if (seen.completions && seen.logs) setLoading(false); };
     const un1 = onSnapshot(collection(getDb(), ...base, 'completions'), (s) => {
       setCompletions(s.docs.map((d) => toCompletion(d.id, d.data())));
-      setLoading(false);
+      seen.completions = true;
+      settle();
     }, (e) => console.error(e));
     const un2 = onSnapshot(collection(getDb(), ...base, 'feedback'), (s) =>
       setFeedback(s.docs.map((d) => toFeedback(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)),
       (e) => console.error(e),
     );
-    const un3 = onSnapshot(collection(getDb(), ...base, 'logs'), (s) =>
-      setLogs(s.docs.map((d) => toLog(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)),
-      (e) => console.error(e),
-    );
+    const un3 = onSnapshot(collection(getDb(), ...base, 'logs'), (s) => {
+      setLogs(s.docs.map((d) => toLog(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt));
+      seen.logs = true;
+      settle();
+    }, (e) => console.error(e));
     return () => { un1(); un2(); un3(); };
   }, [ready, code, weekId]);
   return { completions, feedback, logs, loading };

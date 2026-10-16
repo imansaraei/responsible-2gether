@@ -109,6 +109,7 @@ test('chore logs: valid log accepted, bad multiplier/minutes/day/extra keys reje
   await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l6'), { ...logDoc, by: 'c' }));
   await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l7'), { ...logDoc, extra: true }));
   await assertFails(updateDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1'), { minutes: 15 }));
+  await assertFails(setDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1'), logDoc));
   await assertSucceeds(deleteDoc(h(authed(), 'weeks', '2026-W42', 'logs', 'l1')));
 });
 
@@ -119,5 +120,6 @@ test('chores accept an optional whole-minute blockMinutes between 5 and 240', as
   await assertFails(setDoc(h(authed(), 'chores', 'b3'), { ...base, blockMinutes: 0 }));
   await assertFails(setDoc(h(authed(), 'chores', 'b4'), { ...base, blockMinutes: 300 }));
   await assertFails(setDoc(h(authed(), 'chores', 'b5'), { ...base, blockMinutes: 7.5 }));
+  await assertFails(setDoc(h(authed(), 'chores', 'b6'), { ...base, blockMinutes: 7 }));
   await assertSucceeds(updateDoc(h(authed(), 'chores', 'b1'), { blockMinutes: 30 }));
 });

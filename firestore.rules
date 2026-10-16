@@ -5,7 +5,7 @@ service cloud.firestore {
     function isMember(m) { return m == 'a' || m == 'b'; }
     function validName(s, max) { return s is string && s.size() > 0 && s.size() <= max; }
     function validHours(h) { return h is number && h >= 0.25 && h <= 40; }
-    function validBlock(n) { return n is int && n >= 5 && n <= 240; }
+    function validBlock(n) { return n is int && n >= 5 && n <= 240 && n % 5 == 0; }
 
     match /households/{code} {
       allow get: if signedIn();
