@@ -14,10 +14,14 @@ export function ChoresModule({ section, onSection }: { section: ChoresSection; o
   const index = CHORES_SECTIONS.findIndex((s) => s.id === section);
 
   function onKeyDown(e: KeyboardEvent) {
-    const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
-    if (!step) return;
+    let nextIndex: number;
+    if (e.key === 'ArrowRight') nextIndex = (index + 1) % CHORES_SECTIONS.length;
+    else if (e.key === 'ArrowLeft') nextIndex = (index - 1 + CHORES_SECTIONS.length) % CHORES_SECTIONS.length;
+    else if (e.key === 'Home') nextIndex = 0;
+    else if (e.key === 'End') nextIndex = CHORES_SECTIONS.length - 1;
+    else return;
     e.preventDefault();
-    const next = CHORES_SECTIONS[(index + step + CHORES_SECTIONS.length) % CHORES_SECTIONS.length];
+    const next = CHORES_SECTIONS[nextIndex];
     onSection(next.id);
     document.getElementById(`chores-tab-${next.id}`)?.focus();
   }

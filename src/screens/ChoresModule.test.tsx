@@ -14,6 +14,7 @@ test('shows the Tidy Together title and the four sections in order', () => {
   expect(tabs.map((t) => t.textContent)).toEqual(['This week', 'To-do', 'Feedback', 'Setup']);
   expect(screen.getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByText('week screen')).toBeInTheDocument();
+  expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['0', '-1', '-1', '-1']);
 });
 
 test('renders the requested section', () => {
@@ -36,5 +37,15 @@ test('arrow keys move between sections', async () => {
   await userEvent.keyboard('{ArrowRight}');
   expect(onSection).toHaveBeenCalledWith('todo');
   await userEvent.keyboard('{ArrowLeft}');
+  expect(onSection).toHaveBeenLastCalledWith('setup');
+});
+
+test('Home and End jump to the first and last section', async () => {
+  const onSection = vi.fn();
+  render(<ChoresModule section="todo" onSection={onSection} />);
+  screen.getByRole('tab', { name: 'To-do' }).focus();
+  await userEvent.keyboard('{Home}');
+  expect(onSection).toHaveBeenLastCalledWith('week');
+  await userEvent.keyboard('{End}');
   expect(onSection).toHaveBeenLastCalledWith('setup');
 });
