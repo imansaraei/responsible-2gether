@@ -41,8 +41,9 @@ export function MoneyMine() {
         <button className="btn primary big" onClick={() => setSheet(true)}>＋ Purchase</button>
         {!s.loggedToday && (
           <button className="btn ghost" onClick={() => {
+            setError(null);
             void addMoneyEntry(code, { budgetId: budget.id, by: me, day: today, amount: 0, label: '', kind: 'nothing' }, crypto.randomUUID())
-              .catch((err) => console.error(err));
+              .catch((err) => { console.error(err); setError('Couldn’t log that. Try again.'); });
           }}>No spending today</button>
         )}
       </div>

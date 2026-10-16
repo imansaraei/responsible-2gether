@@ -35,6 +35,14 @@ test('No spending today logs a check-in', async () => {
     { budgetId: 'personal-b', by: 'b', day: '2026-10-16', amount: 0, label: '', kind: 'nothing' }, expect.any(String));
 });
 
+test('No spending today failing shows an alert', async () => {
+  addMoneyEntry.mockRejectedValueOnce(new Error('nope'));
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  view([]);
+  await userEvent.click(screen.getByRole('button', { name: 'No spending today' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t log that. Try again.');
+});
+
 test('lists this week, delete only for today, never the partner', async () => {
   view([
     entry({ id: 'e1' }),

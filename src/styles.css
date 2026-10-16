@@ -196,3 +196,6 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .today-big strong.over { color: var(--danger); }
 .home-actions.two { grid-template-columns: 1fr 1fr; }
 .no-spend { min-height: 44px; width: 100%; margin-bottom: 12px; }
+
+.pot-hero .big { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pot-hero .big.over { color: var(--danger); }

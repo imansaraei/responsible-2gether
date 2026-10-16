@@ -21,7 +21,7 @@ export function MoneyHomePot() {
 
   return (
     <main className="page">
-      <div className="card stack">
+      <div className="card stack pot-hero">
         <span className={`big${s.monthLeft < 0 ? ' over' : ''}`}>{formatGBP(s.monthLeft)} left this month</span>
         <span className="muted">of {formatGBP(s.monthAllowance)}</span>
       </div>

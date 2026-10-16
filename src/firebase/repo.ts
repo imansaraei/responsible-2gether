@@ -197,17 +197,23 @@ export async function exportHousehold(code: string): Promise<Backup> {
       logs: l.docs.map((d) => toLog(d.id, d.data())),
     };
   }));
-  const [sd, bd, md] = await Promise.all([
-    getDocFromServer(settingsDoc(db, code)),
-    getDocsFromServer(budgetsCol(db, code)),
-    getDocsFromServer(moneyCol(db, code)),
-  ]);
-  const money = {
-    settings: toMoneySettings(sd.exists() ? sd.data() : undefined),
-    budgets: bd.docs.map((d) => toBudget(d.id, d.data())),
-    entries: md.docs.map((d) => toMoneyEntry(d.id, d.data())),
-  };
-  return { version: 1, exportedAt: Date.now(), code, members: h.data().members as Members, chores, weeks, money };
+  // Old rules may not allow reading the money collections: export the rest instead of failing the whole backup.
+  let money: Backup['money'];
+  try {
+    const [sd, bd, md] = await Promise.all([
+      getDocFromServer(settingsDoc(db, code)),
+      getDocsFromServer(budgetsCol(db, code)),
+      getDocsFromServer(moneyCol(db, code)),
+    ]);
+    money = {
+      settings: toMoneySettings(sd.exists() ? sd.data() : undefined),
+      budgets: bd.docs.map((d) => toBudget(d.id, d.data())),
+      entries: md.docs.map((d) => toMoneyEntry(d.id, d.data())),
+    };
+  } catch (e) {
+    if ((e as { code?: string })?.code !== 'permission-denied') throw e;
+  }
+  return { version: 1, exportedAt: Date.now(), code, members: h.data().members as Members, chores, weeks, ...(money ? { money } : {}) };
 }
 
 type Op = { ref: DocumentReference; data?: Record<string, unknown> };
