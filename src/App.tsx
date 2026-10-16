@@ -4,6 +4,7 @@ import { useChores, useHouseholdDoc, useSyncStatus } from './firebase/hooks';
 import { loadDevice, saveDevice, type DeviceState } from './device';
 import { weekIdOf } from './domain/week';
 import { HouseholdContext, type HouseholdCtx } from './state/HouseholdContext';
+import { PocketMoneyProvider } from './state/PocketMoneyContext';
 import { OfflinePill } from './components/OfflinePill';
 import { TabBar } from './components/TabBar';
 import { SetupNeeded } from './screens/SetupNeeded';
@@ -88,11 +89,13 @@ function Household({ code, device, updateDevice }: { code: string; device: Devic
     : <Home onNavigate={navigate} />;
   return (
     <HouseholdContext.Provider value={ctx}>
-      <div className={`app${offline ? ' has-pill' : ''}`}>
-        {screen}
-        <OfflinePill code={code} />
-        <TabBar active={tab} onChange={(t) => navigate({ tab: t })} />
-      </div>
+      <PocketMoneyProvider code={code}>
+        <div className={`app${offline ? ' has-pill' : ''}`}>
+          {screen}
+          <OfflinePill code={code} />
+          <TabBar active={tab} onChange={(t) => navigate({ tab: t })} />
+        </div>
+      </PocketMoneyProvider>
     </HouseholdContext.Provider>
   );
 }
