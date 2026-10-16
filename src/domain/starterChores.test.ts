@@ -16,3 +16,11 @@ test('total is 17.25 hours', () => {
 test('assignees alternate starting with a', () => {
   expect([0, 1, 2, 3].map(starterAssignee)).toEqual(['a', 'b', 'a', 'b']);
 });
+
+test('every starter chore has a block between 5 and 240 in steps of 5', () => {
+  for (const c of STARTER_CHORES) {
+    expect(c.blockMinutes % 5).toBe(0);
+    expect(c.blockMinutes).toBeGreaterThanOrEqual(5);
+    expect(c.blockMinutes).toBeLessThanOrEqual(240);
+  }
+});
