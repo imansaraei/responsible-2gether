@@ -19,7 +19,7 @@ export default defineConfig({
         short_name: 'Khooneh',
         description: 'Our home, together: chores and pocket money.',
         theme_color: '#0f766e',
-        background_color: '#f7f6f2',
+        background_color: '#fbf3e8',
         display: 'standalone',
         start_url: '.',
         icons: [
