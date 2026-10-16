@@ -23,8 +23,8 @@ const ctx: HouseholdCtx = {
   device: { code: 'tidy-otter-maple-4821', me: 'a', lastExportAt: Date.now() },
   updateDevice: () => {},
 };
-const renderIt = (logs: ChoreLog[] = []) =>
-  render(<HouseholdContext.Provider value={ctx}><ChoreLogger logs={logs} /></HouseholdContext.Provider>);
+const renderIt = (logs: ChoreLog[] = [], c: HouseholdCtx = ctx) =>
+  render(<HouseholdContext.Provider value={c}><ChoreLogger logs={logs} /></HouseholdContext.Provider>);
 
 afterEach(() => { vi.clearAllMocks(); vi.useRealTimers(); });
 
@@ -87,4 +87,36 @@ test('the undo toast disappears after 10 seconds', async () => {
   expect(screen.getByRole('status')).toBeInTheDocument();
   act(() => { vi.advanceTimersByTime(10_000); });
   expect(screen.queryByRole('status')).toBeNull();
+});
+
+test('undo after a week rollover deletes from the original week', async () => {
+  const { rerender } = renderIt();
+  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+  rerender(<HouseholdContext.Provider value={{ ...ctx, currentWeekId: '2026-W43' }}><ChoreLogger logs={[]} /></HouseholdContext.Provider>);
+  await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
+  expect(deleteLog).toHaveBeenCalledWith('tidy-otter-maple-4821', '2026-W42', expect.any(String));
+});
+
+test('a failed write shows an alert, cleared by the next successful Add', async () => {
+  addLog.mockRejectedValueOnce(new Error('x'));
+  renderIt();
+  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t save — check your connection.');
+  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+test('focus returns to the row after Add', async () => {
+  renderIt();
+  await userEvent.click(screen.getByRole('button', { name: /Cooking/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByRole('button', { name: /Cooking/ })).toHaveFocus();
+});
+
+test('empty state when there are no active chores', () => {
+  renderIt([], { ...ctx, chores: [] });
+  expect(screen.getByText('No chores yet — add some in Setup.')).toBeInTheDocument();
 });
