@@ -2,21 +2,24 @@ import { useState } from 'react';
 import { useHousehold } from '../state/HouseholdContext';
 import { usePocketMoney } from '../state/PocketMoneyContext';
 import { addMoneyEntry, deleteMoneyEntry } from '../firebase/repo';
-import { allowanceStatus, formatGBP, weekDaysInMonth } from '../domain/money';
+import { allowanceStatus, formatGBP, piggyBank, weekDaysInMonth } from '../domain/money';
 import { PurchaseSheet } from '../components/PurchaseSheet';
+import { BankSheet } from '../components/BankSheet';
 import { Toast, useToast } from '../components/Toast';
 import { EntryList } from './EntryList';
 
 export function MoneyMine() {
   const { code, me } = useHousehold();
-  const { today, entries, budgetFor } = usePocketMoney();
+  const { today, timeZone, entries, budgetFor } = usePocketMoney();
   const [sheet, setSheet] = useState(false);
+  const [bankSheet, setBankSheet] = useState(false);
   const { toast, show } = useToast();
   const [error, setError] = useState<string | null>(null);
   const budget = budgetFor(me);
   if (!budget) return null;
 
   const s = allowanceStatus(budget, entries, today);
+  const bank = Math.max(0, piggyBank(budget, entries, today, timeZone));
   const week = new Set(weekDaysInMonth(today));
   const mine = entries.filter((e) => e.budgetId === budget.id && e.by === me && week.has(e.day));
 
@@ -37,6 +40,15 @@ export function MoneyMine() {
           </div>
         ))}
       </div>
+      <p className="muted small pacing-hint">Daily = money left this month ÷ days left.</p>
+      <section className="card piggy" aria-labelledby="piggy-title">
+        <div className="piggy-head">
+          <h2 id="piggy-title">Piggy Bank</h2>
+          <span className="big">{formatGBP(bank)}</span>
+        </div>
+        <p className="muted small">Month-end leftovers land here.</p>
+        {bank > 0 && <button className="btn" onClick={() => setBankSheet(true)}>Move to this month</button>}
+      </section>
       <div className="home-actions">
         <button className="btn primary big" onClick={() => setSheet(true)}>＋ Purchase</button>
         {!s.loggedToday && (
@@ -54,6 +66,7 @@ export function MoneyMine() {
         onDelete={(id) => deleteMoneyEntry(code, id).catch(() => setError('Couldn’t delete this entry — try again.'))}
       />
       <PurchaseSheet open={sheet} source="mine" onClose={() => setSheet(false)} onSaved={show} />
+      <BankSheet open={bankSheet} onClose={() => setBankSheet(false)} onSaved={show} />
       <Toast text={toast} />
     </main>
   );

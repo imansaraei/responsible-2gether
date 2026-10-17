@@ -14,8 +14,8 @@ const household: HouseholdCtx = {
   chores: [], device: { code: 'c', me: 'b', lastExportAt: Date.now() }, updateDevice: () => {},
 };
 const budgets: Budget[] = [
-  { id: 'personal-b', name: 'Tahereh', owner: 'b', monthlyAmount: 25000, penalty: true, order: 1, createdAt: 1, archivedAt: null },
-  { id: 'home', name: 'Home', owner: 'shared', monthlyAmount: 10000, penalty: false, order: 2, createdAt: 1, archivedAt: null },
+  { id: 'personal-b', name: 'Tahereh', owner: 'b', monthlyAmount: 25000, penalty: true, order: 1, createdAt: Date.parse('2026-10-01T09:00:00Z'), archivedAt: null },
+  { id: 'home', name: 'Home', owner: 'shared', monthlyAmount: 10000, penalty: false, order: 2, createdAt: Date.parse('2026-10-01T09:00:00Z'), archivedAt: null },
 ];
 const money = (entries: MoneyEntry[] = []): PocketMoneyCtx => ({
   loading: false, confirmed: true, isSetUp: true, timeZone: 'Europe/London', today: '2026-10-16', budgets, entries,
@@ -39,12 +39,12 @@ test('saving £5 to my allowance writes pence, today, me, and reports what is le
   const { onSaved, onClose } = renderSheet();
   expect(screen.getByRole('dialog', { name: 'New purchase' })).toBeInTheDocument();
   await userEvent.type(screen.getByLabelText('Amount'), '5');
-  expect(screen.getByText('After this: £3.06 left today')).toBeInTheDocument();
+  expect(screen.getByText('After this: £10.63 left today')).toBeInTheDocument();
   await userEvent.type(screen.getByLabelText('What was it?'), 'Coffee');
   await userEvent.click(screen.getByRole('button', { name: 'Save' }));
   expect(addMoneyEntry).toHaveBeenCalledWith('c',
     { budgetId: 'personal-b', by: 'b', day: '2026-10-16', amount: 500, label: 'Coffee', kind: 'purchase' }, expect.any(String));
-  expect(onSaved).toHaveBeenCalledWith('£5.00 — £3.06 left today');
+  expect(onSaved).toHaveBeenCalledWith('£5.00 — £10.63 left today');
   expect(onClose).toHaveBeenCalled();
 });
 

@@ -49,7 +49,7 @@ const validMoneyEntry = (e: unknown) =>
   isObj(e) && isId(e.id) && isId(e.budgetId) && isMember(e.by) &&
   typeof e.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.day) &&
   typeof e.label === 'string' && e.label.length <= 40 && isNum(e.createdAt) &&
-  ((e.kind === 'purchase' && isPence(e.amount, 1)) || (e.kind === 'nothing' && e.amount === 0));
+  (((e.kind === 'purchase' || e.kind === 'bank') && isPence(e.amount, 1)) || (e.kind === 'nothing' && e.amount === 0));
 const validMoneySettings = (s: unknown) =>
   s === null || (isObj(s) && isStr(s.timeZone, 64) && s.currency === 'GBP');
 

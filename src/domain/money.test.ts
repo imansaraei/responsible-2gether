@@ -1,5 +1,5 @@
 import {
-  addDays, allowanceStatus, dayKeyIn, daysInMonth, defaultAllowanceFor, formatGBP, monthKeyOf, monthRange,
+  addDays, allowanceStatus, daysLeftInMonth, piggyBank, dayKeyIn, daysInMonth, defaultAllowanceFor, formatGBP, monthKeyOf, monthRange,
   parseAmount, weekDaysInMonth,
 } from './money';
 import type { MoneyEntry } from './types';
@@ -36,12 +36,46 @@ test('weekDaysInMonth is Mon–Sun clipped to the month', () => {
 });
 
 describe('allowanceStatus', () => {
+  test('user example: £150 of £200 used by the 20th leaves £5 a day', () => {
+    const s = allowanceStatus({ id: 'personal-a', monthlyAmount: 20_000 },
+      [entry({ budgetId: 'personal-a', day: '2026-11-03', amount: 10_000 }), entry({ budgetId: 'personal-a', day: '2026-11-20', amount: 5_000 })],
+      '2026-11-21');
+    expect(s.daily).toBe(500);
+    expect(s.monthLeft).toBe(5_000);
+  });
+
+  test('spending today changes tomorrow, not today', () => {
+    const budget = { id: 'personal-a', monthlyAmount: 20_000 };
+    const spent = [entry({ budgetId: 'personal-a', day: '2026-11-21', amount: 1_000 })];
+    expect(allowanceStatus(budget, spent, '2026-11-21').daily).toBe(20_000 / 10);
+    expect(allowanceStatus(budget, spent, '2026-11-21').todayLeft).toBe(1_000);
+    expect(allowanceStatus(budget, spent, '2026-11-22').daily).toBe(19_000 / 9);
+  });
+
+  test('week allowance paces from the week’s first day in the month', () => {
+    // Mon 16 Nov – Sun 22 Nov; £60 spent before the week, £1 on Tuesday.
+    const s = allowanceStatus({ id: 'personal-a', monthlyAmount: 21_000 },
+      [entry({ budgetId: 'personal-a', day: '2026-11-02', amount: 6_000 }), entry({ budgetId: 'personal-a', day: '2026-11-17', amount: 100 })],
+      '2026-11-18');
+    expect(s.weekAllowance).toBe((15_000 / 15) * 7);
+    expect(s.weekSpent).toBe(100);
+  });
+
+  test('Piggy Bank top-ups raise the month allowance and are not spending', () => {
+    const s = allowanceStatus({ id: 'personal-a', monthlyAmount: 20_000 },
+      [entry({ budgetId: 'personal-a', day: '2026-11-21', amount: 3_000, kind: 'bank' })], '2026-11-21');
+    expect(s.monthAllowance).toBe(23_000);
+    expect(s.daily).toBe(2_300);
+    expect(s.monthSpent).toBe(0);
+    expect(s.loggedToday).toBe(false);
+  });
+
   const tahereh = { id: 'personal-b', monthlyAmount: 25_000 };
 
-  test('worked example: £250 in October, £5 today', () => {
-    const s = allowanceStatus(tahereh, [entry({ amount: 500 })], '2026-10-16');
+  test('worked example: £250 on 1 October, £5 today', () => {
+    const s = allowanceStatus(tahereh, [entry({ day: '2026-10-01', amount: 500 })], '2026-10-01');
     expect(formatGBP(s.daily)).toBe('£8.06');
-    expect(formatGBP(s.weekAllowance)).toBe('£56.45');
+    expect(formatGBP(s.weekAllowance)).toBe('£32.26'); // Thu 1 – Sun 4 Oct
     expect(formatGBP(s.todayLeft)).toBe('£3.06');
     expect(s.monthLeft).toBe(24_500);
     expect(s.loggedToday).toBe(true);
@@ -64,7 +98,7 @@ describe('allowanceStatus', () => {
   test('not logged today and overspend goes negative', () => {
     const s = allowanceStatus({ id: 'personal-a', monthlyAmount: 3100 }, [entry({ budgetId: 'personal-a', day: '2026-10-15', amount: 5000 })], '2026-10-16');
     expect(s.loggedToday).toBe(false);
-    expect(s.daily).toBe(100);
+    expect(s.daily).toBe(0); // nothing left to pace
     expect(s.monthLeft).toBe(-1900);
     expect(formatGBP(s.monthLeft)).toBe('-£19.00');
   });
@@ -87,4 +121,44 @@ test('defaultAllowanceFor matches names', () => {
   expect(defaultAllowanceFor('Tahereh')).toBe(25_000);
   expect(defaultAllowanceFor('Iman')).toBe(20_000);
   expect(defaultAllowanceFor('Alex')).toBe(20_000);
+});
+
+test('daysLeftInMonth counts today', () => {
+  expect(daysLeftInMonth('2026-11-21')).toBe(10);
+  expect(daysLeftInMonth('2026-10-31')).toBe(1);
+  expect(daysLeftInMonth('2026-10-01')).toBe(31);
+});
+
+describe('piggyBank', () => {
+  const created = Date.parse('2026-10-16T09:00:00Z');
+  const iman = { id: 'personal-a', monthlyAmount: 20_000, createdAt: created };
+  const e = (p: Partial<MoneyEntry>) => entry({ budgetId: 'personal-a', by: 'a', ...p });
+
+  test('starts at zero in the setup month', () => {
+    expect(piggyBank(iman, [e({ day: '2026-10-16', amount: 500 })], '2026-10-20', 'Europe/London')).toBe(0);
+  });
+
+  test('banks each finished month’s leftover, never a negative one', () => {
+    const entries = [
+      e({ day: '2026-10-20', amount: 5_000 }),   // October leaves £150
+      e({ day: '2026-11-03', amount: 30_000 }),  // November overspends: banks £0, doesn't subtract
+      e({ day: '2026-11-04', kind: 'nothing', amount: 0 }),
+      entry({ day: '2026-10-20', amount: 1 }),   // someone else's budget
+    ];
+    expect(piggyBank(iman, entries, '2026-11-10', 'Europe/London')).toBe(15_000);
+    expect(piggyBank(iman, entries, '2026-12-01', 'Europe/London')).toBe(15_000);
+  });
+
+  test('moving money out lowers the balance; unspent top-ups come back at month end', () => {
+    const entries = [e({ day: '2026-10-20', amount: 5_000 }), e({ day: '2026-11-05', amount: 4_000, kind: 'bank' })];
+    expect(piggyBank(iman, entries, '2026-11-05', 'Europe/London')).toBe(11_000);
+    // November: £200 + £40 top-up, nothing spent → £240 banked.
+    expect(piggyBank(iman, entries, '2026-12-01', 'Europe/London')).toBe(15_000 + 24_000 - 4_000);
+  });
+
+  test('uses the household time zone for the setup month', () => {
+    const lateSept = { ...iman, createdAt: Date.parse('2026-09-30T23:30:00Z') }; // 00:30 1 Oct in London
+    expect(piggyBank(lateSept, [], '2026-10-15', 'Europe/London')).toBe(0);
+    expect(piggyBank(lateSept, [], '2026-10-15', 'UTC')).toBe(20_000);
+  });
 });

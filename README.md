@@ -57,11 +57,12 @@ Firestore. On each phone:
 ## Pocket Money
 
 - The first visit to Money sets the monthly allowances: one for each person (theirs to spend on anything) and a shared Home pot.
-- Daily allowance = monthly ÷ days in the month; this week = daily × this week's days in this month. For example £250 in October is £8.06 a day and £56.45 a week.
+- Daily allowance = money left this month ÷ days left, counting today. For example, with £200 a month in a 30-day month and £150 spent by the end of the 20th, the 21st's daily allowance is £50 ÷ 10 = £5. Spending today changes tomorrow's figure, not today's. This week's allowance is paced the same way from the start of the week.
+- **Piggy Bank** (personal allowances only, not the Home pot): each month's leftover is added to your Piggy Bank on the 1st of the next month. Overspending never takes it below zero. It starts at £0, so the first deposit lands on 1 November. Move money into this month's allowance from Money › Mine › **Move to this month**; to undo, delete today's "From Piggy Bank" entry.
 - Log purchases on the same day with **＋ Purchase** (Home or Money). On a day you spend nothing, tap **No spending today**. You can delete your own entries from today.
 - Money › Family shows totals only — each person's purchases stay private to them. The Home pot is itemised for both.
 - Days follow the household time zone chosen at setup.
-- Coming next: a 120% charge for days that aren't logged, two Second Chances a month to fix them, and the Piggy Bank for month-end savings.
+- Coming next: a 120% charge for days that aren't logged and two Second Chances a month to fix them.
 
 ## Development
 

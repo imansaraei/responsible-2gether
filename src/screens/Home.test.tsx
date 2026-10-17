@@ -95,7 +95,7 @@ test('while money is loading the card shows Loading…, not the setup prompt', (
 test('set up: today strip shows what is left and the family card shows totals only', async () => {
   money = setUpMoney([{ id: 'e1', budgetId: 'personal-a', by: 'a', day: '2026-10-16', amount: 500, label: 'Coffee', kind: 'purchase', createdAt: 1 }]);
   const nav = renderHome();
-  expect(screen.getByText('£1.45')).toBeInTheDocument();
+  expect(screen.getByText('£7.50')).toBeInTheDocument();
   expect(screen.getByText('left today')).toBeInTheDocument();
   expect(screen.getByRole('region', { name: 'My pocket money today' })).toHaveTextContent(/this week/);
   const card = screen.getByRole('button', { name: /Pocket Money/ });

@@ -199,3 +199,12 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 
 .pot-hero .big { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .pot-hero .big.over { color: var(--danger); }
+
+.pacing-hint { margin: -4px 0 12px; }
+.piggy { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.piggy-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.piggy-head h2 { margin: 0; font-size: 1.05rem; }
+.piggy-head .big { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.piggy p { margin: 0; }
+.piggy .btn { min-height: 44px; align-self: flex-start; }
+.entry-row .entry-amount.in { color: var(--accent); }
