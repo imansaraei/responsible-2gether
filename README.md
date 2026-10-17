@@ -54,6 +54,15 @@ Firestore. On each phone:
 - Warning: if you gave negative feedback but fewer than 2 positives per negative (positives < 2 × negatives), the app nudges you to balance it out.
 - Weeks run Monday to Sunday and reset every Monday; past weeks are kept as history.
 
+## Pocket Money
+
+- The first visit to Money sets the monthly allowances: one for each person (theirs to spend on anything) and a shared Home pot.
+- Daily allowance = monthly ÷ days in the month; this week = daily × this week's days in this month. For example £250 in October is £8.06 a day and £56.45 a week.
+- Log purchases on the same day with **＋ Purchase** (Home or Money). On a day you spend nothing, tap **No spending today**. You can delete your own entries from today.
+- Money › Family shows totals only — each person's purchases stay private to them. The Home pot is itemised for both.
+- Days follow the household time zone chosen at setup.
+- Coming next: a 120% charge for days that aren't logged, two Second Chances a month to fix them, and the Piggy Bank for month-end savings.
+
 ## Development
 
 Requires Node 24+ and Java 17 for the emulator:

@@ -1,4 +1,4 @@
-import type { Chore, ChoreLog, Completion, Feedback, Members } from './types';
+import type { Budget, Chore, ChoreLog, Completion, Feedback, Members, MoneyEntry, MoneySettings } from './types';
 import { PERCENTS } from './types';
 import { isValidCode } from './householdCode';
 
@@ -9,6 +9,7 @@ export interface Backup {
   members: Members;
   chores: Chore[];
   weeks: Record<string, { completions: Completion[]; feedback: Feedback[]; logs?: ChoreLog[] }>;
+  money?: { settings: MoneySettings | null; budgets: Budget[]; entries: MoneyEntry[] };
 }
 
 type R = { ok: true; backup: Backup } | { ok: false; error: string };
@@ -39,9 +40,26 @@ const validLog = (l: unknown) =>
   [1, 2, 3].includes(l.multiplier as number) && Number.isInteger(l.minutes) && (l.minutes as number) >= 5 && (l.minutes as number) <= 720 &&
   typeof l.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(l.day) && isNum(l.createdAt);
 
-/** Logs are immutable (create-only in the rules), so an existing id already holds the same content: skip re-writing it. */
+const isPence = (x: unknown, min: number) => Number.isInteger(x) && (x as number) >= min && (x as number) <= 1_000_000;
+const validBudget = (b: unknown) =>
+  isObj(b) && isId(b.id) && isStr(b.name, 30) && (b.owner === 'a' || b.owner === 'b' || b.owner === 'shared') &&
+  isPence(b.monthlyAmount, 0) && typeof b.penalty === 'boolean' && Number.isInteger(b.order) &&
+  isNum(b.createdAt) && (b.archivedAt === null || isNum(b.archivedAt));
+const validMoneyEntry = (e: unknown) =>
+  isObj(e) && isId(e.id) && isId(e.budgetId) && isMember(e.by) &&
+  typeof e.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.day) &&
+  typeof e.label === 'string' && e.label.length <= 40 && isNum(e.createdAt) &&
+  ((e.kind === 'purchase' && isPence(e.amount, 1)) || (e.kind === 'nothing' && e.amount === 0));
+const validMoneySettings = (s: unknown) =>
+  s === null || (isObj(s) && isStr(s.timeZone, 64) && s.currency === 'GBP');
+
+/** Logs and money entries are immutable (create-only in the rules), so an existing id already holds the same content: skip re-writing it. */
 export const planLogWrites = (backupLogPaths: string[], existingPaths: Set<string>): string[] =>
   backupLogPaths.filter((p) => !existingPaths.has(p));
+
+/** Docs to delete after an import. Settings and budgets are never deleted (the rules forbid it); import only sets them. */
+export const stalePaths = (existing: string[], keep: Set<string>): string[] =>
+  existing.filter((p) => !keep.has(p) && !/\/(settings|budgets)\//.test(p));
 
 export function validateBackup(x: unknown): R {
   const fail = (error: string): R => ({ ok: false, error });
@@ -59,6 +77,11 @@ export function validateBackup(x: unknown): R {
     if (!w.completions.every(validCompletion)) return fail(`Week ${weekId} has an invalid completion.`);
     if (!w.feedback.every(validFeedback)) return fail(`Week ${weekId} has invalid feedback.`);
     if (w.logs !== undefined && (!Array.isArray(w.logs) || !w.logs.every(validLog))) return fail(`Week ${weekId} has an invalid chore log.`);
+  }
+  if (x.money !== undefined) {
+    const m = x.money;
+    if (!isObj(m) || !validMoneySettings(m.settings) || !Array.isArray(m.budgets) || !m.budgets.every(validBudget)
+      || !Array.isArray(m.entries) || !m.entries.every(validMoneyEntry)) return fail('Backup has an invalid Pocket Money section.');
   }
   return { ok: true, backup: x as unknown as Backup };
 }

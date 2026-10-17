@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
-import { collection, doc, onSnapshot } from 'firebase/firestore';
+import { useEffect, useRef, useState } from 'react';
+import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
 import { onPendingChange, pendingWrites } from './pending';
-import { toChore, toCompletion, toFeedback, toLog } from './repo';
-import type { Chore, ChoreLog, Completion, Feedback, Members } from '../domain/types';
+import { toBudget, toChore, toCompletion, toFeedback, toLog, toMoneyEntry, toMoneySettings } from './repo';
+import type { Budget, Chore, ChoreLog, Completion, Feedback, Members, MoneyEntry, MoneySettings } from '../domain/types';
+import { monthRange } from '../domain/money';
 
 function useSignedIn(): boolean {
   const [ready, setReady] = useState(false);
@@ -104,4 +105,37 @@ export function useSyncStatus(_code: string): SyncStatus {
   }, []);
   if (!online) return 'offline';
   return pending ? 'saving' : 'synced';
+}
+
+export function useMoney(code: string, monthKey: string) {
+  const ready = useSignedIn();
+  const [settings, setSettings] = useState<MoneySettings | null>(null);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [entries, setEntries] = useState<MoneyEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fromCache, setFromCache] = useState(true);
+  const [error, setError] = useState(false);
+  const subscribedCode = useRef<string | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    // Only a new household shows Loading…; a month rollover keeps the previous month's data (and any open sheet) until the new snapshot arrives.
+    if (subscribedCode.current !== code) { setLoading(true); subscribedCode.current = code; }
+    setError(false);
+    const seen = { settings: false, budgets: false, entries: false };
+    const settle = () => { if (seen.settings && seen.budgets && seen.entries) setLoading(false); };
+    const mark = (k: keyof typeof seen) => { seen[k] = true; settle(); };
+    const db = getDb();
+    const { first, last } = monthRange(monthKey);
+    const un1 = onSnapshot(doc(db, 'households', code, 'settings', 'app'),
+      (s) => { setSettings(toMoneySettings(s.exists() ? s.data() : undefined)); mark('settings'); },
+      (e) => { console.error(e); setError(true); mark('settings'); });
+    const un2 = onSnapshot(collection(db, 'households', code, 'budgets'), { includeMetadataChanges: true },
+      (s) => { setBudgets(s.docs.map((d) => toBudget(d.id, d.data())).filter((b) => b.archivedAt === null).sort((a, b) => a.order - b.order)); setFromCache(s.metadata.fromCache); mark('budgets'); },
+      (e) => { console.error(e); setError(true); mark('budgets'); });
+    const un3 = onSnapshot(query(collection(db, 'households', code, 'money'), where('day', '>=', first), where('day', '<=', last)),
+      (s) => { setEntries(s.docs.map((d) => toMoneyEntry(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)); mark('entries'); },
+      (e) => { console.error(e); setError(true); mark('entries'); });
+    return () => { un1(); un2(); un3(); };
+  }, [ready, code, monthKey]);
+  return { settings, budgets, entries, loading, fromCache, error };
 }

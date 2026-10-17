@@ -1,18 +1,21 @@
 import {
-  collection, deleteDoc, doc, getDocFromServer, getDocsFromServer, setDoc, updateDoc, writeBatch,
+  collection, deleteDoc, doc, getDocFromServer, getDocsFromServer, runTransaction, setDoc, updateDoc, writeBatch,
   type DocumentReference, type Firestore,
 } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
 import { track } from './pending';
-import type { Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, Multiplier, Percent } from '../domain/types';
+import type { Budget, Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, MoneyEntry, MoneyKind, MoneySettings, Multiplier, Percent } from '../domain/types';
 import { other } from '../domain/types';
 import { legacyHoursFor } from '../domain/blocks';
-import { planLogWrites, type Backup } from '../domain/backup';
+import { planLogWrites, stalePaths, type Backup } from '../domain/backup';
 import { STARTER_CHORES, starterAssignee } from '../domain/starterChores';
 
 const hh = (db: Firestore, code: string) => doc(db, 'households', code);
 const choresCol = (db: Firestore, code: string) => collection(db, 'households', code, 'chores');
 const weekDoc = (db: Firestore, code: string, weekId: string) => doc(db, 'households', code, 'weeks', weekId);
+const budgetsCol = (db: Firestore, code: string) => collection(db, 'households', code, 'budgets');
+const moneyCol = (db: Firestore, code: string) => collection(db, 'households', code, 'money');
+const settingsDoc = (db: Firestore, code: string) => doc(db, 'households', code, 'settings', 'app');
 const newId = () => crypto.randomUUID();
 
 export async function householdExists(code: string): Promise<boolean> {
@@ -102,6 +105,60 @@ export async function deleteLog(code: string, weekId: string, id: string) {
   await track(deleteDoc(doc(weekDoc(getDb(), code, weekId), 'logs', id)));
 }
 
+export async function setupPocketMoney(
+  code: string,
+  input: { timeZone: string; personal: { a: number; b: number }; home: number; names: { a: string; b: string } },
+) {
+  await ensureSignedIn();
+  const db = getDb();
+  const now = Date.now();
+  const refs = {
+    settings: settingsDoc(db, code),
+    a: doc(budgetsCol(db, code), 'personal-a'),
+    b: doc(budgetsCol(db, code), 'personal-b'),
+    home: doc(budgetsCol(db, code), 'home'),
+  };
+  // A transaction reads first, so a stale or offline phone can never overwrite allowances that already exist. It fails offline, which is intended.
+  await track(runTransaction(db, async (tx) => {
+    const snaps = await Promise.all(Object.values(refs).map((r) => tx.get(r)));
+    if (snaps.some((s) => s.exists())) throw new Error('already-set-up');
+    tx.set(refs.settings, { timeZone: input.timeZone, currency: 'GBP' });
+    tx.set(refs.a, { name: input.names.a.slice(0, 30), owner: 'a', monthlyAmount: input.personal.a, penalty: true, order: 0, createdAt: now, archivedAt: null });
+    tx.set(refs.b, { name: input.names.b.slice(0, 30), owner: 'b', monthlyAmount: input.personal.b, penalty: true, order: 1, createdAt: now, archivedAt: null });
+    tx.set(refs.home, { name: 'Home', owner: 'shared', monthlyAmount: input.home, penalty: false, order: 2, createdAt: now, archivedAt: null });
+  }));
+}
+
+/** `id` lets the caller show the entry and delete it before the server acknowledges the write. */
+export async function addMoneyEntry(
+  code: string,
+  input: { budgetId: string; by: MemberId; day: string; amount: number; label: string; kind: MoneyKind },
+  id: string = newId(),
+) {
+  await ensureSignedIn();
+  await track(setDoc(doc(moneyCol(getDb(), code), id), {
+    budgetId: input.budgetId, by: input.by, day: input.day, amount: input.amount,
+    label: Array.from(input.label.trim()).slice(0, 40).join(''), kind: input.kind, createdAt: Date.now(),
+  }));
+}
+
+export async function deleteMoneyEntry(code: string, id: string) {
+  await ensureSignedIn();
+  await track(deleteDoc(doc(moneyCol(getDb(), code), id)));
+}
+
+export const toBudget = (id: string, d: Record<string, unknown>): Budget => ({
+  id, name: d.name as string, owner: d.owner as Budget['owner'], monthlyAmount: d.monthlyAmount as number,
+  penalty: Boolean(d.penalty), order: (d.order as number) ?? 0, createdAt: d.createdAt as number,
+  archivedAt: (d.archivedAt as number | null) ?? null,
+});
+export const toMoneyEntry = (id: string, d: Record<string, unknown>): MoneyEntry => ({
+  id, budgetId: d.budgetId as string, by: d.by as MemberId, day: d.day as string, amount: d.amount as number,
+  label: (d.label as string) ?? '', kind: d.kind as MoneyKind, createdAt: d.createdAt as number,
+});
+export const toMoneySettings = (d: Record<string, unknown> | undefined): MoneySettings | null =>
+  d && typeof d.timeZone === 'string' ? { timeZone: d.timeZone, currency: 'GBP' } : null;
+
 export const toChore = (id: string, d: Record<string, unknown>): Chore => ({
   id, name: d.name as string, hours: d.hours as number, assignee: d.assignee as MemberId,
   createdAt: d.createdAt as number, archivedAt: (d.archivedAt as number | null) ?? null,
@@ -140,7 +197,23 @@ export async function exportHousehold(code: string): Promise<Backup> {
       logs: l.docs.map((d) => toLog(d.id, d.data())),
     };
   }));
-  return { version: 1, exportedAt: Date.now(), code, members: h.data().members as Members, chores, weeks };
+  // Old rules may not allow reading the money collections: export the rest instead of failing the whole backup.
+  let money: Backup['money'];
+  try {
+    const [sd, bd, md] = await Promise.all([
+      getDocFromServer(settingsDoc(db, code)),
+      getDocsFromServer(budgetsCol(db, code)),
+      getDocsFromServer(moneyCol(db, code)),
+    ]);
+    money = {
+      settings: toMoneySettings(sd.exists() ? sd.data() : undefined),
+      budgets: bd.docs.map((d) => toBudget(d.id, d.data())),
+      entries: md.docs.map((d) => toMoneyEntry(d.id, d.data())),
+    };
+  } catch (e) {
+    if ((e as { code?: string })?.code !== 'permission-denied') throw e;
+  }
+  return { version: 1, exportedAt: Date.now(), code, members: h.data().members as Members, chores, weeks, ...(money ? { money } : {}) };
 }
 
 type Op = { ref: DocumentReference; data?: Record<string, unknown> };
@@ -168,6 +241,11 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
       (await getDocsFromServer(collection(w.ref, sub))).docs.forEach((d) => existing.push(d.ref));
     }
     existing.push(w.ref);
+  }
+
+  // Old backups have no money section: leave Pocket Money data untouched. Settings and budgets are never scanned (the rules forbid deleting them).
+  if (backup.money) {
+    (await getDocsFromServer(moneyCol(db, code))).docs.forEach((d) => existing.push(d.ref));
   }
 
   const existingPaths = new Set(existing.map((r) => r.path));
@@ -209,6 +287,26 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
     }
   }
 
+  if (backup.money) {
+    const mo = backup.money;
+    if (mo.settings) add(settingsDoc(db, code), { timeZone: mo.settings.timeZone, currency: 'GBP' });
+    for (const b of mo.budgets) {
+      add(doc(budgetsCol(db, code), b.id), {
+        name: b.name, owner: b.owner, monthlyAmount: b.monthlyAmount, penalty: b.penalty, order: b.order,
+        createdAt: b.createdAt, archivedAt: b.archivedAt,
+      });
+    }
+    // Money entries are create-only like logs: skip ones that already exist, but keep them.
+    const entryRef = (id: string) => doc(moneyCol(db, code), id);
+    const entryWrites = new Set(planLogWrites(mo.entries.map((e) => entryRef(e.id).path), existingPaths));
+    for (const e of mo.entries) {
+      const ref = entryRef(e.id);
+      if (!entryWrites.has(ref.path)) { keep.add(ref.path); continue; }
+      add(ref, { budgetId: e.budgetId, by: e.by, day: e.day, amount: e.amount, label: e.label, kind: e.kind, createdAt: e.createdAt });
+    }
+  }
+
   await commitInChunks(db, sets);
-  await commitInChunks(db, existing.filter((r) => !keep.has(r.path)).map((ref) => ({ ref })));
+  const stale = new Set(stalePaths(existing.map((r) => r.path), keep));
+  await commitInChunks(db, existing.filter((r) => stale.has(r.path)).map((ref) => ({ ref })));
 }

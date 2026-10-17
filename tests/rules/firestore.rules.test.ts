@@ -123,3 +123,43 @@ test('chores accept an optional whole-minute blockMinutes between 5 and 240', as
   await assertFails(setDoc(h(authed(), 'chores', 'b6'), { ...base, blockMinutes: 7 }));
   await assertSucceeds(updateDoc(h(authed(), 'chores', 'b1'), { blockMinutes: 30 }));
 });
+
+const budget = { name: 'Tahereh', owner: 'b', monthlyAmount: 25000, penalty: true, order: 1, createdAt: 1, archivedAt: null };
+const purchase = { budgetId: 'personal-b', by: 'b', day: '2026-10-16', amount: 500, label: 'Coffee', kind: 'purchase', createdAt: 1 };
+
+test('pocket money settings: only the app doc, GBP, a time zone string', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'settings', 'app'), { timeZone: 'Europe/London', currency: 'GBP' }));
+  await assertFails(setDoc(h(authed(), 'settings', 'other'), { timeZone: 'Europe/London', currency: 'GBP' }));
+  await assertFails(setDoc(h(authed(), 'settings', 'app'), { timeZone: 'Europe/London', currency: 'USD' }));
+  await assertFails(setDoc(h(authed(), 'settings', 'app'), { timeZone: '', currency: 'GBP' }));
+});
+
+test('budgets: owner a/b/shared, whole-pence amount up to £10,000', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'budgets', 'personal-b'), budget));
+  await assertSucceeds(setDoc(h(authed(), 'budgets', 'home'), { ...budget, name: 'Home', owner: 'shared', penalty: false }));
+  await assertFails(setDoc(h(authed(), 'budgets', 'x1'), { ...budget, owner: 'c' }));
+  await assertFails(setDoc(h(authed(), 'budgets', 'x2'), { ...budget, monthlyAmount: 25.5 }));
+  await assertFails(setDoc(h(authed(), 'budgets', 'x3'), { ...budget, monthlyAmount: 2_000_000 }));
+  await assertFails(setDoc(h(authed(), 'budgets', 'x4'), { ...budget, extra: 1 }));
+});
+
+test('money entries: purchases > 0, nothing = 0, label ≤ 40, create-only, deletable', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'money', 'm1'), purchase));
+  await assertSucceeds(setDoc(h(authed(), 'money', 'm2'), { ...purchase, kind: 'nothing', amount: 0, label: '' }));
+  await assertFails(setDoc(h(authed(), 'money', 'm3'), { ...purchase, amount: 0 }));
+  await assertFails(setDoc(h(authed(), 'money', 'm4'), { ...purchase, kind: 'nothing', amount: 100 }));
+  await assertFails(setDoc(h(authed(), 'money', 'm5'), { ...purchase, amount: 5.5 }));
+  await assertFails(setDoc(h(authed(), 'money', 'm6'), { ...purchase, label: 'x'.repeat(41) }));
+  await assertFails(setDoc(h(authed(), 'money', 'm7'), { ...purchase, day: '16/10/2026' }));
+  await assertFails(setDoc(h(authed(), 'money', 'm8'), { ...purchase, by: 'c' }));
+  await assertFails(updateDoc(h(authed(), 'money', 'm1'), { amount: 100 }));
+  await assertSucceeds(deleteDoc(h(authed(), 'money', 'm1')));
+});
+
+test('money entries: a backup-shaped import re-setting an existing entry id is denied (why import skips them)', async () => {
+  const db = authed();
+  await assertSucceeds(setDoc(h(db, 'money', 'm1'), purchase));
+  const batch = writeBatch(db);
+  batch.set(h(db, 'money', 'm1'), purchase);
+  await assertFails(batch.commit());
+});
