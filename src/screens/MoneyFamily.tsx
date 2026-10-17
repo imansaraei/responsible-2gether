@@ -1,11 +1,11 @@
 import { useHousehold } from '../state/HouseholdContext';
 import { usePocketMoney } from '../state/PocketMoneyContext';
-import { allowanceStatus, formatGBP } from '../domain/money';
+import { allowanceStatus, formatGBP, piggyBank } from '../domain/money';
 import { memberColor } from '../components/colors';
 
 export function MoneyFamily() {
   const { members } = useHousehold();
-  const { today, entries, budgetFor } = usePocketMoney();
+  const { today, timeZone, entries, budgetFor } = usePocketMoney();
   const rows = [
     { key: 'a', name: members.a.name, color: memberColor('a'), budget: budgetFor('a') },
     { key: 'b', name: members.b.name, color: memberColor('b'), budget: budgetFor('b') },
@@ -22,6 +22,7 @@ export function MoneyFamily() {
               <strong>{r.name}</strong>
               <span className={`big${s.monthLeft < 0 ? ' over' : ''}`}>{formatGBP(s.monthLeft)} left</span>
               <span className="muted">{formatGBP(s.monthSpent)} spent</span>
+              {r.key !== 'home' && <span className="muted">Piggy Bank {formatGBP(Math.max(0, piggyBank(r.budget!, entries, today, timeZone)))}</span>}
             </li>
           );
         })}

@@ -19,3 +19,14 @@ test('shows only totals per person and Home, no labels', () => {
   for (const l of ['Lunch', 'Coffee', 'Groceries']) expect(screen.queryByText(l)).toBeNull();
   expect(screen.getByText('Totals only — each person’s purchases stay private to them.')).toBeInTheDocument();
 });
+
+test('shows each person’s Piggy Bank, not the Home pot’s', () => {
+  render(<Providers ctx={money({ today: '2026-11-03', entries: [
+    entry({ id: '1', by: 'a', budgetId: 'personal-a', day: '2026-10-05', amount: 2000 }),
+    entry({ id: '2', day: '2026-10-05', amount: 25000 }),
+    entry({ id: '3', budgetId: 'home', day: '2026-10-05', amount: 3600 }),
+  ] })}><MoneyFamily /></Providers>);
+  expect(screen.getByText('Piggy Bank £180.00')).toBeInTheDocument();
+  expect(screen.getByText('Piggy Bank £0.00')).toBeInTheDocument();
+  expect(screen.getAllByText(/^Piggy Bank/)).toHaveLength(2);
+});

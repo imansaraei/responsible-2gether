@@ -9,9 +9,9 @@ export const household: HouseholdCtx = {
   chores: [], device: { code: 'c', me: 'b', lastExportAt: Date.now() }, updateDevice: () => {},
 };
 export const budgets: Budget[] = [
-  { id: 'personal-a', name: 'Iman', owner: 'a', monthlyAmount: 20000, penalty: true, order: 0, createdAt: 1, archivedAt: null },
-  { id: 'personal-b', name: 'Tahereh', owner: 'b', monthlyAmount: 25000, penalty: true, order: 1, createdAt: 1, archivedAt: null },
-  { id: 'home', name: 'Home', owner: 'shared', monthlyAmount: 10000, penalty: false, order: 2, createdAt: 1, archivedAt: null },
+  { id: 'personal-a', name: 'Iman', owner: 'a', monthlyAmount: 20000, penalty: true, order: 0, createdAt: Date.parse('2026-10-01T09:00:00Z'), archivedAt: null },
+  { id: 'personal-b', name: 'Tahereh', owner: 'b', monthlyAmount: 25000, penalty: true, order: 1, createdAt: Date.parse('2026-10-01T09:00:00Z'), archivedAt: null },
+  { id: 'home', name: 'Home', owner: 'shared', monthlyAmount: 10000, penalty: false, order: 2, createdAt: Date.parse('2026-10-01T09:00:00Z'), archivedAt: null },
 ];
 export const money = (over: Partial<PocketMoneyCtx> = {}): PocketMoneyCtx => ({
   loading: false, confirmed: true, isSetUp: true, timeZone: 'Europe/London', today: '2026-10-16', budgets, entries: [],

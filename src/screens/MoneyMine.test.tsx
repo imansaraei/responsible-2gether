@@ -14,10 +14,10 @@ const view = (entries = [entry({ id: 'e1' })]) => render(<Providers ctx={money({
 
 test('shows today, week and month tiles', () => {
   view();
-  expect(screen.getByText('£3.06')).toBeInTheDocument();
-  expect(screen.getByText('of £8.06')).toBeInTheDocument();
-  expect(screen.getByText('£51.45')).toBeInTheDocument();
-  expect(screen.getByText('of £56.45')).toBeInTheDocument();
+  expect(screen.getByText('£10.63')).toBeInTheDocument();
+  expect(screen.getByText('of £15.63')).toBeInTheDocument();
+  expect(screen.getByText('£82.50')).toBeInTheDocument();
+  expect(screen.getByText('of £87.50')).toBeInTheDocument();
   expect(screen.getByText('£245.00')).toBeInTheDocument();
   expect(screen.getByText('of £250.00')).toBeInTheDocument();
 });
@@ -67,4 +67,41 @@ test('＋ Purchase opens the sheet', async () => {
   view();
   await userEvent.click(screen.getByRole('button', { name: '＋ Purchase' }));
   expect(screen.getByRole('dialog', { name: 'New purchase' })).toBeInTheDocument();
+});
+
+describe('Piggy Bank', () => {
+  // October: £50 spent of £250, so £200 banked on 1 November.
+  const october = [entry({ id: 'o1', day: '2026-10-10', amount: 5000 })];
+  const november = (entries = october) => render(<Providers ctx={money({ today: '2026-11-03', entries })}><MoneyMine /></Providers>);
+
+  test('shows the balance and the Move button', () => {
+    november();
+    const card = screen.getByRole('region', { name: 'Piggy Bank' });
+    expect(card).toHaveTextContent('£200.00');
+    expect(card).toHaveTextContent('Month-end leftovers land here.');
+    expect(screen.getByText('Daily = money left this month ÷ days left.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move to this month' })).toBeInTheDocument();
+  });
+
+  test('hides the Move button at £0', () => {
+    view();
+    expect(screen.getByRole('region', { name: 'Piggy Bank' })).toHaveTextContent('£0.00');
+    expect(screen.queryByRole('button', { name: 'Move to this month' })).toBeNull();
+  });
+
+  test('Move to this month opens the sheet', async () => {
+    november();
+    await userEvent.click(screen.getByRole('button', { name: 'Move to this month' }));
+    expect(screen.getByRole('dialog', { name: 'Move to this month' })).toBeInTheDocument();
+  });
+
+  test('a bank entry reads From Piggy Bank +£x and is deletable today', async () => {
+    november([...october, entry({ id: 'k1', day: '2026-11-03', amount: 2000, label: 'From Piggy Bank', kind: 'bank' })]);
+    expect(screen.getByText('From Piggy Bank')).toBeInTheDocument();
+    expect(screen.getByText('+£20.00')).toHaveClass('entry-amount', 'in');
+    expect(screen.getByRole('region', { name: 'Piggy Bank' })).toHaveTextContent('£180.00');
+    expect(screen.getByText('of £9.64')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Delete From Piggy Bank +£20.00' }));
+    expect(deleteMoneyEntry).toHaveBeenCalledWith('c', 'k1');
+  });
 });
