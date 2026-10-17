@@ -125,14 +125,15 @@ export function useMoney(code: string, monthKey: string) {
     const settle = () => { if (seen.settings && seen.budgets && seen.entries) setLoading(false); };
     const mark = (k: keyof typeof seen) => { seen[k] = true; settle(); };
     const db = getDb();
-    const { first, last } = monthRange(monthKey);
+    // No lower bound: the Piggy Bank settles every past month from the full history (a few hundred small docs a year).
+    const { last } = monthRange(monthKey);
     const un1 = onSnapshot(doc(db, 'households', code, 'settings', 'app'),
       (s) => { setSettings(toMoneySettings(s.exists() ? s.data() : undefined)); mark('settings'); },
       (e) => { console.error(e); setError(true); mark('settings'); });
     const un2 = onSnapshot(collection(db, 'households', code, 'budgets'), { includeMetadataChanges: true },
       (s) => { setBudgets(s.docs.map((d) => toBudget(d.id, d.data())).filter((b) => b.archivedAt === null).sort((a, b) => a.order - b.order)); setFromCache(s.metadata.fromCache); mark('budgets'); },
       (e) => { console.error(e); setError(true); mark('budgets'); });
-    const un3 = onSnapshot(query(collection(db, 'households', code, 'money'), where('day', '>=', first), where('day', '<=', last)),
+    const un3 = onSnapshot(query(collection(db, 'households', code, 'money'), where('day', '<=', last)),
       (s) => { setEntries(s.docs.map((d) => toMoneyEntry(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)); mark('entries'); },
       (e) => { console.error(e); setError(true); mark('entries'); });
     return () => { un1(); un2(); un3(); };

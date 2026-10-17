@@ -152,6 +152,9 @@ test('money entries: purchases > 0, nothing = 0, label ≤ 40, create-only, dele
   await assertFails(setDoc(h(authed(), 'money', 'm6'), { ...purchase, label: 'x'.repeat(41) }));
   await assertFails(setDoc(h(authed(), 'money', 'm7'), { ...purchase, day: '16/10/2026' }));
   await assertFails(setDoc(h(authed(), 'money', 'm8'), { ...purchase, by: 'c' }));
+  await assertSucceeds(setDoc(h(authed(), 'money', 'm9'), { ...purchase, kind: 'bank', label: 'From Piggy Bank' }));
+  await assertFails(setDoc(h(authed(), 'money', 'm10'), { ...purchase, kind: 'bank', amount: 0 }));
+  await assertFails(setDoc(h(authed(), 'money', 'm11'), { ...purchase, kind: 'loan' }));
   await assertFails(updateDoc(h(authed(), 'money', 'm1'), { amount: 100 }));
   await assertSucceeds(deleteDoc(h(authed(), 'money', 'm1')));
 });

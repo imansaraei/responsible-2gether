@@ -55,24 +55,58 @@ export interface AllowanceStatus {
   loggedToday: boolean;
 }
 
+const sum = (xs: MoneyEntry[]) => xs.reduce((s, e) => s + e.amount, 0);
+const purchases = (xs: MoneyEntry[]) => xs.filter((e) => e.kind === 'purchase');
+const topUps = (xs: MoneyEntry[]) => xs.filter((e) => e.kind === 'bank');
+
+/** Days from `day` to the end of its month, counting `day` itself. */
+export const daysLeftInMonth = (day: string) => daysInMonth(monthKeyOf(day)) - Number(day.slice(8, 10)) + 1;
+
+/**
+ * Daily and weekly allowances pace the money left: what was left at the start of today (or of this week)
+ * divided by the days left, so spending today changes tomorrow's daily figure, not today's.
+ * Piggy Bank top-ups (kind 'bank') raise this month's allowance; only purchases count as spending.
+ */
 export function allowanceStatus(budget: Pick<Budget, 'id' | 'monthlyAmount'>, entries: MoneyEntry[], today: string): AllowanceStatus {
   const month = monthKeyOf(today);
   const mine = entries.filter((e) => e.budgetId === budget.id && monthKeyOf(e.day) === month);
-  const week = new Set(weekDaysInMonth(today));
-  const sum = (xs: MoneyEntry[]) => xs.reduce((s, e) => s + e.amount, 0);
-  const daily = budget.monthlyAmount / daysInMonth(month);
-  const weekAllowance = daily * week.size;
-  const todaySpent = sum(mine.filter((e) => e.day === today));
-  const weekSpent = sum(mine.filter((e) => week.has(e.day)));
-  const monthSpent = sum(mine);
+  const spent = purchases(mine);
+  const weekDays = weekDaysInMonth(today);
+  const week = new Set(weekDays);
+  const monthAllowance = budget.monthlyAmount + sum(topUps(mine));
+  const leftBefore = (day: string) => Math.max(0, monthAllowance - sum(spent.filter((e) => e.day < day)));
+  const daily = leftBefore(today) / daysLeftInMonth(today);
+  const weekAllowance = (leftBefore(weekDays[0]) / daysLeftInMonth(weekDays[0])) * week.size;
+  const todaySpent = sum(spent.filter((e) => e.day === today));
+  const weekSpent = sum(spent.filter((e) => week.has(e.day)));
+  const monthSpent = sum(spent);
   return {
-    daily, weekAllowance, monthAllowance: budget.monthlyAmount,
+    daily, weekAllowance, monthAllowance,
     todaySpent, weekSpent, monthSpent,
     todayLeft: daily - todaySpent,
     weekLeft: weekAllowance - weekSpent,
-    monthLeft: budget.monthlyAmount - monthSpent,
-    loggedToday: mine.some((e) => e.day === today),
+    monthLeft: monthAllowance - monthSpent,
+    loggedToday: mine.some((e) => e.day === today && e.kind !== 'bank'),
   };
+}
+
+export const BANK_LABEL = 'From Piggy Bank';
+
+/**
+ * The Piggy Bank balance: every finished month since the budget was created banks its leftover
+ * (never less than zero), minus everything moved out of the bank so far, this month included.
+ */
+export function piggyBank(budget: Pick<Budget, 'id' | 'monthlyAmount' | 'createdAt'>, entries: MoneyEntry[], today: string, timeZone: string): number {
+  const mine = entries.filter((e) => e.budgetId === budget.id);
+  const thisMonth = monthKeyOf(today);
+  let month = monthKeyOf(dayKeyIn(new Date(budget.createdAt), timeZone));
+  let saved = 0;
+  while (month < thisMonth) {
+    const inMonth = mine.filter((e) => monthKeyOf(e.day) === month);
+    saved += Math.max(0, budget.monthlyAmount + sum(topUps(inMonth)) - sum(purchases(inMonth)));
+    month = monthKeyOf(addDays(monthRange(month).last, 1));
+  }
+  return saved - sum(topUps(mine.filter((e) => monthKeyOf(e.day) <= thisMonth)));
 }
 
 const gbp = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 2, maximumFractionDigits: 2 });

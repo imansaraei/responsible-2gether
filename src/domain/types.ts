@@ -68,7 +68,7 @@ export interface Budget {
   archivedAt: number | null;
 }
 
-export type MoneyKind = 'purchase' | 'nothing';
+export type MoneyKind = 'purchase' | 'nothing' | 'bank';
 
 export interface MoneyEntry {
   id: string;

@@ -60,7 +60,7 @@ service cloud.firestore {
           && isMember(request.resource.data.by)
           && validDay(request.resource.data.day)
           && request.resource.data.label is string && request.resource.data.label.size() <= 40
-          && ((request.resource.data.kind == 'purchase' && validPence(request.resource.data.amount, 1))
+          && ((request.resource.data.kind in ['purchase', 'bank'] && validPence(request.resource.data.amount, 1))
               || (request.resource.data.kind == 'nothing' && request.resource.data.amount == 0))
           && request.resource.data.createdAt is number;
       }
