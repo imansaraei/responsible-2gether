@@ -18,7 +18,7 @@ const budgets: Budget[] = [
   { id: 'home', name: 'Home', owner: 'shared', monthlyAmount: 10000, penalty: false, order: 2, createdAt: Date.parse('2026-10-01T09:00:00Z'), archivedAt: null },
 ];
 const money = (entries: MoneyEntry[] = []): PocketMoneyCtx => ({
-  loading: false, confirmed: true, isSetUp: true, timeZone: 'Europe/London', today: '2026-10-16', budgets, entries,
+  loading: false, confirmed: true, isSetUp: true, timeZone: 'Europe/London', today: '2026-10-16', budgets, entries, missions: [], bills: [],
   budgetFor: (o) => budgets.find((b) => b.owner === o),
 });
 const renderSheet = (props: Partial<Parameters<typeof PurchaseSheet>[0]> = {}, entries: MoneyEntry[] = []) => {

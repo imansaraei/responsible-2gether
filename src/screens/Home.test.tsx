@@ -10,7 +10,7 @@ import { Home } from './Home';
 
 vi.mock('../firebase/repo', () => ({ addMoneyEntry: vi.fn(async () => {}) }));
 const notSetUp: PocketMoneyCtx = {
-  loading: false, confirmed: true, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [],
+  loading: false, confirmed: true, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [], missions: [], bills: [],
   budgetFor: () => undefined,
 };
 let money: PocketMoneyCtx = notSetUp;

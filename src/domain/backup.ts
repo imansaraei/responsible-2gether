@@ -1,4 +1,4 @@
-import type { Budget, Chore, ChoreLog, Completion, Feedback, Members, MoneyEntry, MoneySettings } from './types';
+import type { Bill, Budget, Chore, ChoreLog, Completion, Feedback, Members, Mission, MoneyEntry, MoneySettings } from './types';
 import { PERCENTS } from './types';
 import { isValidCode } from './householdCode';
 
@@ -9,7 +9,7 @@ export interface Backup {
   members: Members;
   chores: Chore[];
   weeks: Record<string, { completions: Completion[]; feedback: Feedback[]; logs?: ChoreLog[] }>;
-  money?: { settings: MoneySettings | null; budgets: Budget[]; entries: MoneyEntry[] };
+  money?: { settings: MoneySettings | null; budgets: Budget[]; entries: MoneyEntry[]; missions?: Mission[]; bills?: Bill[] };
 }
 
 type R = { ok: true; backup: Backup } | { ok: false; error: string };
@@ -49,7 +49,13 @@ const validMoneyEntry = (e: unknown) =>
   isObj(e) && isId(e.id) && isId(e.budgetId) && isMember(e.by) &&
   typeof e.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.day) &&
   typeof e.label === 'string' && e.label.length <= 40 && isNum(e.createdAt) &&
-  (((e.kind === 'purchase' || e.kind === 'bank') && isPence(e.amount, 1)) || (e.kind === 'nothing' && e.amount === 0));
+  ((['purchase', 'bank', 'giftIn', 'giftOut'].includes(e.kind as string) && isPence(e.amount, 1)) || (e.kind === 'nothing' && e.amount === 0));
+const validMission = (m: unknown) =>
+  isObj(m) && isId(m.id) && isMember(m.from) && isMember(m.to) && m.from !== m.to && isStr(m.title, 60) &&
+  isPence(m.gift, 1) && ['open', 'done', 'approved', 'cancelled'].includes(m.status as string) && isNum(m.createdAt) && isNum(m.updatedAt);
+const validBill = (b: unknown) =>
+  isObj(b) && isId(b.id) && isMember(b.owner) && isStr(b.name, 40) && isPence(b.amount, 1) &&
+  isNum(b.createdAt) && (b.archivedAt === null || isNum(b.archivedAt));
 const validMoneySettings = (s: unknown) =>
   s === null || (isObj(s) && isStr(s.timeZone, 64) && s.currency === 'GBP');
 
@@ -81,7 +87,9 @@ export function validateBackup(x: unknown): R {
   if (x.money !== undefined) {
     const m = x.money;
     if (!isObj(m) || !validMoneySettings(m.settings) || !Array.isArray(m.budgets) || !m.budgets.every(validBudget)
-      || !Array.isArray(m.entries) || !m.entries.every(validMoneyEntry)) return fail('Backup has an invalid Pocket Money section.');
+      || !Array.isArray(m.entries) || !m.entries.every(validMoneyEntry)
+      || (m.missions !== undefined && (!Array.isArray(m.missions) || !m.missions.every(validMission)))
+      || (m.bills !== undefined && (!Array.isArray(m.bills) || !m.bills.every(validBill)))) return fail('Backup has an invalid Pocket Money section.');
   }
   return { ok: true, backup: x as unknown as Backup };
 }

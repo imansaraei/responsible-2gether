@@ -1,4 +1,4 @@
-import type { Budget, MoneyEntry } from './types';
+import type { Bill, Budget, MemberId, Mission, MoneyEntry } from './types';
 
 export const MAX_AMOUNT = 1_000_000; // £10,000 in pence
 export const MAX_LABEL = 40;
@@ -58,6 +58,9 @@ export interface AllowanceStatus {
 const sum = (xs: MoneyEntry[]) => xs.reduce((s, e) => s + e.amount, 0);
 const purchases = (xs: MoneyEntry[]) => xs.filter((e) => e.kind === 'purchase');
 const topUps = (xs: MoneyEntry[]) => xs.filter((e) => e.kind === 'bank');
+/** Bank top-ups and gifts received add to a month's allowance; gifts given take from it. Gifts are not spending. */
+const allowanceChange = (xs: MoneyEntry[]) =>
+  xs.reduce((s, e) => s + (e.kind === 'bank' || e.kind === 'giftIn' ? e.amount : e.kind === 'giftOut' ? -e.amount : 0), 0);
 
 /** Days from `day` to the end of its month, counting `day` itself. */
 export const daysLeftInMonth = (day: string) => daysInMonth(monthKeyOf(day)) - Number(day.slice(8, 10)) + 1;
@@ -65,7 +68,7 @@ export const daysLeftInMonth = (day: string) => daysInMonth(monthKeyOf(day)) - N
 /**
  * Daily and weekly allowances pace the money left: what was left at the start of today (or of this week)
  * divided by the days left, so spending today changes tomorrow's daily figure, not today's.
- * Piggy Bank top-ups (kind 'bank') raise this month's allowance; only purchases count as spending.
+ * Piggy Bank top-ups (kind 'bank') and gifts received raise this month's allowance, gifts given lower it; only purchases count as spending.
  */
 export function allowanceStatus(budget: Pick<Budget, 'id' | 'monthlyAmount'>, entries: MoneyEntry[], today: string): AllowanceStatus {
   const month = monthKeyOf(today);
@@ -73,7 +76,7 @@ export function allowanceStatus(budget: Pick<Budget, 'id' | 'monthlyAmount'>, en
   const spent = purchases(mine);
   const weekDays = weekDaysInMonth(today);
   const week = new Set(weekDays);
-  const monthAllowance = budget.monthlyAmount + sum(topUps(mine));
+  const monthAllowance = budget.monthlyAmount + allowanceChange(mine);
   const leftBefore = (day: string) => Math.max(0, monthAllowance - sum(spent.filter((e) => e.day < day)));
   const daily = leftBefore(today) / daysLeftInMonth(today);
   const weekAllowance = (leftBefore(weekDays[0]) / daysLeftInMonth(weekDays[0])) * week.size;
@@ -86,7 +89,7 @@ export function allowanceStatus(budget: Pick<Budget, 'id' | 'monthlyAmount'>, en
     todayLeft: daily - todaySpent,
     weekLeft: weekAllowance - weekSpent,
     monthLeft: monthAllowance - monthSpent,
-    loggedToday: mine.some((e) => e.day === today && e.kind !== 'bank'),
+    loggedToday: mine.some((e) => e.day === today && (e.kind === 'purchase' || e.kind === 'nothing')),
   };
 }
 
@@ -103,7 +106,7 @@ export function piggyBank(budget: Pick<Budget, 'id' | 'monthlyAmount' | 'created
   let saved = 0;
   while (month < thisMonth) {
     const inMonth = mine.filter((e) => monthKeyOf(e.day) === month);
-    saved += Math.max(0, budget.monthlyAmount + sum(topUps(inMonth)) - sum(purchases(inMonth)));
+    saved += Math.max(0, budget.monthlyAmount + allowanceChange(inMonth) - sum(purchases(inMonth)));
     month = monthKeyOf(addDays(monthRange(month).last, 1));
   }
   return saved - sum(topUps(mine.filter((e) => monthKeyOf(e.day) <= thisMonth)));
@@ -122,6 +125,14 @@ export function parseAmount(s: string): number | null {
   const pence = Math.round(Number(t) * 100);
   return pence >= 1 && pence <= MAX_AMOUNT ? pence : null;
 }
+
+/** The monthly total of a member's live bills, paid on top of the allowance. */
+export const billsTotal = (bills: Bill[], owner: MemberId): number =>
+  bills.filter((b) => b.owner === owner && b.archivedAt === null).reduce((s, b) => s + b.amount, 0);
+
+/** Missions that need `me`: open ones assigned to me, and done ones waiting for my approval. */
+export const missionsWaiting = (missions: Mission[], me: MemberId): Mission[] =>
+  missions.filter((m) => (m.to === me && m.status === 'open') || (m.from === me && m.status === 'done'));
 
 export function defaultAllowanceFor(name: string): number {
   if (/tahereh/i.test(name)) return 25_000;

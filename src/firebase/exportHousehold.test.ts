@@ -6,7 +6,7 @@ vi.mock('./pending', () => ({ track: <T,>(p: T) => p }));
 vi.mock('firebase/firestore', () => {
   const ref = (path: string) => ({ path });
   const fail = (path: string) => {
-    if (denyMoney && path.includes(denyMoney)) throw Object.assign(new Error('denied'), { code: denyMoney === 'budgets' ? 'permission-denied' : 'unavailable' });
+    if (denyMoney && path.includes(denyMoney)) throw Object.assign(new Error('denied'), { code: ['budgets', 'missions'].includes(denyMoney) ? 'permission-denied' : 'unavailable' });
   };
   return {
     doc: (_d: unknown, ...p: string[]) => ref(p.join('/')),
@@ -25,6 +25,12 @@ vi.mock('firebase/firestore', () => {
 afterEach(() => { denyMoney = null; });
 
 test('includes the money section when readable', async () => {
+  const b = await exportHousehold('c');
+  expect(b.money).toEqual({ settings: null, budgets: [], entries: [], missions: [], bills: [] });
+});
+
+test('rules from before missions and bills: the rest of the money section still exports', async () => {
+  denyMoney = 'missions';
   const b = await exportHousehold('c');
   expect(b.money).toEqual({ settings: null, budgets: [], entries: [] });
 });

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useMoney } from '../firebase/hooks';
 import { dayKeyIn, FALLBACK_TIME_ZONE, monthKeyOf } from '../domain/money';
-import type { Budget, BudgetOwner, MoneyEntry } from '../domain/types';
+import type { Bill, Budget, BudgetOwner, Mission, MoneyEntry } from '../domain/types';
 
 export interface PocketMoneyCtx {
   loading: boolean;
@@ -12,6 +12,9 @@ export interface PocketMoneyCtx {
   today: string;
   budgets: Budget[];
   entries: MoneyEntry[];
+  missions: Mission[];
+  /** Live (not archived) bills of both people. */
+  bills: Bill[];
   budgetFor(owner: BudgetOwner): Budget | undefined;
 }
 
@@ -43,7 +46,7 @@ function safeZone(tz: string | undefined): string {
 
 export function PocketMoneyProvider({ code, children }: { code: string; children: ReactNode }) {
   const [monthKey, setMonthKey] = useState(() => monthKeyOf(dayKeyIn(new Date(), FALLBACK_TIME_ZONE)));
-  const { settings, budgets, entries, loading, fromCache, error } = useMoney(code, monthKey);
+  const { settings, budgets, entries, missions, bills, loading, fromCache, error } = useMoney(code, monthKey);
   const timeZone = safeZone(settings?.timeZone);
   const today = useToday(timeZone);
   useEffect(() => { if (monthKeyOf(today) !== monthKey) setMonthKey(monthKeyOf(today)); }, [today, monthKey]);
@@ -52,9 +55,9 @@ export function PocketMoneyProvider({ code, children }: { code: string; children
     loading,
     confirmed: !loading && !fromCache && !error,
     isSetUp: settings !== null && budgets.length > 0,
-    timeZone, today, budgets, entries,
+    timeZone, today, budgets, entries, missions, bills,
     budgetFor: (owner) => budgets.find((b) => b.owner === owner),
-  }), [loading, fromCache, error, settings, budgets, entries, timeZone, today]);
+  }), [loading, fromCache, error, settings, budgets, entries, missions, bills, timeZone, today]);
 
   return <PocketMoneyContext.Provider value={value}>{children}</PocketMoneyContext.Provider>;
 }

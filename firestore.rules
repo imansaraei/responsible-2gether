@@ -60,9 +60,36 @@ service cloud.firestore {
           && isMember(request.resource.data.by)
           && validDay(request.resource.data.day)
           && request.resource.data.label is string && request.resource.data.label.size() <= 40
-          && ((request.resource.data.kind in ['purchase', 'bank'] && validPence(request.resource.data.amount, 1))
+          && ((request.resource.data.kind in ['purchase', 'bank', 'giftIn', 'giftOut'] && validPence(request.resource.data.amount, 1))
               || (request.resource.data.kind == 'nothing' && request.resource.data.amount == 0))
           && request.resource.data.createdAt is number;
+      }
+
+      // Who may do what (assignee marks done, giver approves) is enforced by the client. Missions are cancelled, never deleted.
+      match /missions/{missionId} {
+        allow read: if signedIn();
+        allow create, update: if signedIn()
+          && request.resource.data.keys().hasOnly(['from', 'to', 'title', 'gift', 'status', 'createdAt', 'updatedAt'])
+          && isMember(request.resource.data.from)
+          && isMember(request.resource.data.to)
+          && request.resource.data.from != request.resource.data.to
+          && validName(request.resource.data.title, 60)
+          && validPence(request.resource.data.gift, 1)
+          && request.resource.data.status in ['open', 'done', 'approved', 'cancelled']
+          && request.resource.data.createdAt is number
+          && request.resource.data.updatedAt is number;
+      }
+
+      // Bills are archived, never deleted.
+      match /bills/{billId} {
+        allow read: if signedIn();
+        allow create, update: if signedIn()
+          && request.resource.data.keys().hasOnly(['owner', 'name', 'amount', 'createdAt', 'archivedAt'])
+          && isMember(request.resource.data.owner)
+          && validName(request.resource.data.name, 40)
+          && validPence(request.resource.data.amount, 1)
+          && request.resource.data.createdAt is number
+          && (request.resource.data.archivedAt == null || request.resource.data.archivedAt is number);
       }
 
       match /weeks/{weekId} {
