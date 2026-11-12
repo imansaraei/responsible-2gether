@@ -61,6 +61,8 @@ Firestore. On each phone:
 - **Piggy Bank** (personal allowances only, not the Home pot): each month's leftover is added to your Piggy Bank on the 1st of the next month. Overspending never takes it below zero. It starts at £0, so the first deposit lands on 1 November. Move money into this month's allowance from Money › Mine › **Move to this month**; to undo, delete today's "From Piggy Bank" entry.
 - Log purchases on the same day with **＋ Purchase** (Home or Money). On a day you spend nothing, tap **No spending today**. You can delete your own entries from today.
 - Money › Family shows totals only — each person's purchases stay private to them. The Home pot is itemised for both.
+- **Missions** (Money › Missions): set the other person a mission with a gift, for example "Clean the cupboards", £5. They tap **Mark done**; you tap **Approve £5** (or **Not yet**, or **Cancel**). On approval the gift moves from your month allowance to theirs, and both daily allowances re-pace straight away. Gifts are not spending and can't be deleted. Home shows a badge when a mission is waiting for you.
+- **Bills** (Money › Mine): list your monthly bills. They are paid on top of the allowance and never change it or the pacing. The card shows "This month: allowance + bills = total"; Money › Family shows both people's bills and totals.
 - Days follow the household time zone chosen at setup.
 - Coming next: a 120% charge for days that aren't logged and two Second Chances a month to fix them.
 
