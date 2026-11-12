@@ -3,7 +3,7 @@ import { usePocketMoney } from '../state/PocketMoneyContext';
 import { PurchaseSheet } from '../components/PurchaseSheet';
 import { Toast, useToast } from '../components/Toast';
 import { addMoneyEntry } from '../firebase/repo';
-import { allowanceStatus, formatGBP } from '../domain/money';
+import { allowanceStatus, formatGBP, missionsWaiting } from '../domain/money';
 import { useHousehold } from '../state/HouseholdContext';
 import { useWeek } from '../firebase/hooks';
 import { summarizeWeek } from '../domain/weekSummary';
@@ -24,6 +24,7 @@ export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
   const homeBudget = pm.budgetFor('shared');
   const partnerBudget = pm.budgetFor(partner);
   const moneyReady = pm.isSetUp && !!myBudget;
+  const waiting = missionsWaiting(pm.missions, me).length;
   const s = myBudget ? allowanceStatus(myBudget, pm.entries, pm.today) : null;
   const monthLeftOf = (b: typeof myBudget) => (b ? formatGBP(allowanceStatus(b, pm.entries, pm.today).monthLeft) : '—');
 
@@ -96,9 +97,9 @@ export function Home({ onNavigate }: { onNavigate(t: NavTarget): void }) {
 
       <button
         className="card module-card"
-        onClick={() => onNavigate(moneyReady ? { tab: 'money', moneySection: 'family' } : { tab: 'money' })}
+        onClick={() => onNavigate(moneyReady ? { tab: 'money', moneySection: waiting > 0 ? 'missions' : 'family' } : { tab: 'money' })}
       >
-        <span className="module-card-title">👛 Pocket Money <span aria-hidden="true">›</span></span>
+        <span className="module-card-title">👛 Pocket Money {moneyReady && waiting > 0 && <span className="badge">{waiting} {waiting === 1 ? 'mission' : 'missions'} waiting</span>} <span aria-hidden="true">›</span></span>
         {pm.loading ? (
           <span className="muted">Loading…</span>
         ) : !pm.isSetUp ? (

@@ -65,6 +65,18 @@ const moneySection = {
   entries: [{ id: 'm1', budgetId: 'personal-b', by: 'b', day: '2026-10-16', amount: 500, label: 'Coffee', kind: 'purchase', createdAt: 2 }],
 };
 
+const withMissionsAndBills = {
+  ...moneySection,
+  entries: [...moneySection.entries, { id: 'gift-in-x', budgetId: 'personal-b', by: 'a', day: '2026-10-16', amount: 500, label: 'Cupboards', kind: 'giftIn', createdAt: 3 }],
+  missions: [{ id: 'x', from: 'a', to: 'b', title: 'Cupboards', gift: 500, status: 'approved', createdAt: 1, updatedAt: 3 }],
+  bills: [{ id: 'b1', owner: 'b', name: 'Phone', amount: 1500, createdAt: 1, archivedAt: null }],
+};
+
+test('accepts missions, bills and gift entries; old backups without them still validate', () => {
+  expect(validateBackup(JSON.parse(JSON.stringify({ ...good, money: withMissionsAndBills }))).ok).toBe(true);
+  expect(validateBackup(JSON.parse(JSON.stringify({ ...good, money: moneySection }))).ok).toBe(true);
+});
+
 test('accepts an optional money section', () => {
   expect(validateBackup(JSON.parse(JSON.stringify({ ...good, money: moneySection }))).ok).toBe(true);
   expect(validateBackup(JSON.parse(JSON.stringify({ ...good, money: { ...moneySection, settings: null } }))).ok).toBe(true);
@@ -77,8 +89,14 @@ test.each([
   ['bad day', (m: any) => { m.entries[0].day = 'today'; }],
   ['long label', (m: any) => { m.entries[0].label = 'x'.repeat(41); }],
   ['currency', (m: any) => { m.settings.currency = 'USD'; }],
+  ['mission to self', (m: any) => { m.missions[0].to = 'a'; }],
+  ['mission status', (m: any) => { m.missions[0].status = 'paid'; }],
+  ['mission gift', (m: any) => { m.missions[0].gift = 0; }],
+  ['bill amount', (m: any) => { m.bills[0].amount = 1.5; }],
+  ['bill name', (m: any) => { m.bills[0].name = 'x'.repeat(41); }],
+  ['gift entry amount', (m: any) => { m.entries[0].kind = 'giftIn'; m.entries[0].amount = 0; }],
 ])('rejects a money section with bad %s', (_l, mutate) => {
-  const m = JSON.parse(JSON.stringify(moneySection));
+  const m = JSON.parse(JSON.stringify(withMissionsAndBills));
   mutate(m);
   expect(validateBackup({ ...JSON.parse(JSON.stringify(good)), money: m }).ok).toBe(false);
 });

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
 import { onPendingChange, pendingWrites } from './pending';
-import { toBudget, toChore, toCompletion, toFeedback, toLog, toMoneyEntry, toMoneySettings } from './repo';
-import type { Budget, Chore, ChoreLog, Completion, Feedback, Members, MoneyEntry, MoneySettings } from '../domain/types';
+import { toBill, toBudget, toChore, toCompletion, toFeedback, toLog, toMission, toMoneyEntry, toMoneySettings } from './repo';
+import type { Bill, Budget, Chore, ChoreLog, Completion, Feedback, Members, Mission, MoneyEntry, MoneySettings } from '../domain/types';
 import { monthRange } from '../domain/money';
 
 function useSignedIn(): boolean {
@@ -112,6 +112,8 @@ export function useMoney(code: string, monthKey: string) {
   const [settings, setSettings] = useState<MoneySettings | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [entries, setEntries] = useState<MoneyEntry[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const [fromCache, setFromCache] = useState(true);
   const [error, setError] = useState(false);
@@ -136,7 +138,14 @@ export function useMoney(code: string, monthKey: string) {
     const un3 = onSnapshot(query(collection(db, 'households', code, 'money'), where('day', '<=', last)),
       (s) => { setEntries(s.docs.map((d) => toMoneyEntry(d.id, d.data())).sort((a, b) => b.createdAt - a.createdAt)); mark('entries'); },
       (e) => { console.error(e); setError(true); mark('entries'); });
-    return () => { un1(); un2(); un3(); };
+    // Missions and bills are small and not part of Loading…: they fill in when they arrive.
+    const un4 = onSnapshot(collection(db, 'households', code, 'missions'),
+      (s) => setMissions(s.docs.map((d) => toMission(d.id, d.data())).sort((a, b) => b.updatedAt - a.updatedAt)),
+      (e) => console.error(e));
+    const un5 = onSnapshot(collection(db, 'households', code, 'bills'),
+      (s) => setBills(s.docs.map((d) => toBill(d.id, d.data())).filter((b) => b.archivedAt === null).sort((a, b) => a.createdAt - b.createdAt)),
+      (e) => console.error(e));
+    return () => { un1(); un2(); un3(); un4(); un5(); };
   }, [ready, code, monthKey]);
-  return { settings, budgets, entries, loading, fromCache, error };
+  return { settings, budgets, entries, missions, bills, loading, fromCache, error };
 }

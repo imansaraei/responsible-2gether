@@ -7,6 +7,7 @@ import { PurchaseSheet } from '../components/PurchaseSheet';
 import { BankSheet } from '../components/BankSheet';
 import { Toast, useToast } from '../components/Toast';
 import { EntryList } from './EntryList';
+import { BillsCard } from '../components/BillsCard';
 
 export function MoneyMine() {
   const { code, me } = useHousehold();
@@ -21,7 +22,7 @@ export function MoneyMine() {
   const s = allowanceStatus(budget, entries, today);
   const bank = Math.max(0, piggyBank(budget, entries, today, timeZone));
   const week = new Set(weekDaysInMonth(today));
-  const mine = entries.filter((e) => e.budgetId === budget.id && e.by === me && week.has(e.day));
+  const mine = entries.filter((e) => e.budgetId === budget.id && (e.by === me || e.kind === 'giftIn') && week.has(e.day));
 
   const tiles = [
     { cap: 'Today', left: s.todayLeft, of: s.daily },
@@ -49,6 +50,7 @@ export function MoneyMine() {
         <p className="muted small">Month-end leftovers land here.</p>
         {bank > 0 && <button className="btn" onClick={() => setBankSheet(true)}>Move to this month</button>}
       </section>
+      <BillsCard monthAllowance={s.monthAllowance} />
       <div className="home-actions">
         <button className="btn primary big" onClick={() => setSheet(true)}>＋ Purchase</button>
         {!s.loggedToday && (

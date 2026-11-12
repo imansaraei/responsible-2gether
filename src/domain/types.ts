@@ -68,7 +68,7 @@ export interface Budget {
   archivedAt: number | null;
 }
 
-export type MoneyKind = 'purchase' | 'nothing' | 'bank';
+export type MoneyKind = 'purchase' | 'nothing' | 'bank' | 'giftIn' | 'giftOut';
 
 export interface MoneyEntry {
   id: string;
@@ -84,4 +84,26 @@ export interface MoneyEntry {
 export interface MoneySettings {
   timeZone: string;
   currency: 'GBP';
+}
+
+export type MissionStatus = 'open' | 'done' | 'approved' | 'cancelled';
+
+export interface Mission {
+  id: string;
+  from: MemberId;  // the giver, who approves
+  to: MemberId;    // the assignee, who marks it done
+  title: string;
+  gift: number;    // pence
+  status: MissionStatus;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface Bill {
+  id: string;
+  owner: MemberId;
+  name: string;
+  amount: number;  // pence a month
+  createdAt: number;
+  archivedAt: number | null;
 }

@@ -1,8 +1,8 @@
 import {
   addDays, allowanceStatus, daysLeftInMonth, piggyBank, dayKeyIn, daysInMonth, defaultAllowanceFor, formatGBP, monthKeyOf, monthRange,
-  parseAmount, weekDaysInMonth,
+  parseAmount, weekDaysInMonth, billsTotal, missionsWaiting,
 } from './money';
-import type { MoneyEntry } from './types';
+import type { Bill, Mission, MoneyEntry } from './types';
 
 const entry = (p: Partial<MoneyEntry>): MoneyEntry => ({
   id: Math.random().toString(36), budgetId: 'personal-b', by: 'b', day: '2026-10-16', amount: 500, label: '', kind: 'purchase', createdAt: 1, ...p,
@@ -160,5 +160,56 @@ describe('piggyBank', () => {
     const lateSept = { ...iman, createdAt: Date.parse('2026-09-30T23:30:00Z') }; // 00:30 1 Oct in London
     expect(piggyBank(lateSept, [], '2026-10-15', 'Europe/London')).toBe(0);
     expect(piggyBank(lateSept, [], '2026-10-15', 'UTC')).toBe(20_000);
+  });
+});
+
+describe('mission gifts', () => {
+  // Iman (a) gives Tahereh (b) £5, approved on 21 Nov (30-day month, 10 days left counting today).
+  const iman = { id: 'personal-a', monthlyAmount: 20_000, createdAt: Date.parse('2026-10-01T09:00:00Z') };
+  const tahereh = { id: 'personal-b', monthlyAmount: 25_000, createdAt: Date.parse('2026-10-01T09:00:00Z') };
+  const gifts = [
+    entry({ id: 'gift-out-m1', budgetId: 'personal-a', by: 'a', day: '2026-11-21', amount: 500, label: 'Cupboards', kind: 'giftOut' }),
+    entry({ id: 'gift-in-m1', budgetId: 'personal-b', by: 'a', day: '2026-11-21', amount: 500, label: 'Cupboards', kind: 'giftIn' }),
+  ];
+
+  test('the giver’s daily drops by 50p and the receiver’s rises by 50p, straight away', () => {
+    const before = { a: allowanceStatus(iman, [], '2026-11-21'), b: allowanceStatus(tahereh, [], '2026-11-21') };
+    const after = { a: allowanceStatus(iman, gifts, '2026-11-21'), b: allowanceStatus(tahereh, gifts, '2026-11-21') };
+    expect(after.a.daily).toBe(before.a.daily - 50);
+    expect(after.b.daily).toBe(before.b.daily + 50);
+    expect(after.a.monthAllowance).toBe(19_500);
+    expect(after.b.monthAllowance).toBe(25_500);
+  });
+
+  test('gifts are not spending and do not count as logging today', () => {
+    const a = allowanceStatus(iman, gifts, '2026-11-21');
+    expect(a.monthSpent).toBe(0);
+    expect(a.todaySpent).toBe(0);
+    expect(a.loggedToday).toBe(false);
+    expect(allowanceStatus(tahereh, gifts, '2026-11-21').loggedToday).toBe(false);
+  });
+
+  test('Piggy Bank leftovers include the month’s gifts; gifts never reduce the bank directly', () => {
+    expect(piggyBank(iman, gifts, '2026-12-02', 'Europe/London')).toBe(20_000 + 19_500);
+    expect(piggyBank(tahereh, gifts, '2026-12-02', 'Europe/London')).toBe(25_000 + 25_500);
+    expect(piggyBank(iman, gifts, '2026-11-25', 'Europe/London')).toBe(20_000);
+  });
+});
+
+describe('billsTotal and missionsWaiting', () => {
+  const bill = (p: Partial<Bill>): Bill => ({ id: 'x', owner: 'a', name: 'Phone', amount: 1_000, createdAt: 1, archivedAt: null, ...p });
+  test('sums only the owner’s live bills', () => {
+    expect(billsTotal([bill({}), bill({ amount: 2_500 }), bill({ owner: 'b' }), bill({ archivedAt: 5 })], 'a')).toBe(3_500);
+    expect(billsTotal([], 'b')).toBe(0);
+  });
+
+  const mission = (p: Partial<Mission>): Mission => ({ id: 'm', from: 'a', to: 'b', title: 'Cupboards', gift: 500, status: 'open', createdAt: 1, updatedAt: 1, ...p });
+  test('open ones for me and done ones waiting for my approval', () => {
+    const ms = [
+      mission({ id: '1' }), mission({ id: '2', status: 'done' }), mission({ id: '3', from: 'b', to: 'a', status: 'done' }),
+      mission({ id: '4', from: 'b', to: 'a' }), mission({ id: '5', status: 'approved' }), mission({ id: '6', status: 'cancelled', from: 'b', to: 'a' }),
+    ];
+    expect(missionsWaiting(ms, 'b').map((m) => m.id)).toEqual(['1', '3']);
+    expect(missionsWaiting(ms, 'a').map((m) => m.id)).toEqual(['2', '4']);
   });
 });

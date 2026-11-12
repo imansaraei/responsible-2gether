@@ -166,3 +166,51 @@ test('money entries: a backup-shaped import re-setting an existing entry id is d
   batch.set(h(db, 'money', 'm1'), purchase);
   await assertFails(batch.commit());
 });
+
+const mission = { from: 'a', to: 'b', title: 'Clean the cupboards', gift: 500, status: 'open', createdAt: 1, updatedAt: 1 };
+const bill = { owner: 'b', name: 'Phone', amount: 1500, createdAt: 1, archivedAt: null };
+
+test('gift entries: giftIn and giftOut need at least 1p', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'money', 'gift-in-x'), { ...purchase, kind: 'giftIn' }));
+  await assertSucceeds(setDoc(h(authed(), 'money', 'gift-out-x'), { ...purchase, kind: 'giftOut' }));
+  await assertFails(setDoc(h(authed(), 'money', 'gift-in-y'), { ...purchase, kind: 'giftIn', amount: 0 }));
+  await assertFails(setDoc(h(authed(), 'money', 'gift-out-y'), { ...purchase, kind: 'giftOut', amount: 2.5 }));
+});
+
+test('missions: shape, from ≠ to, status values, updatable, not deletable', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'missions', 'x'), mission));
+  await assertSucceeds(getDoc(h(authed(), 'missions', 'x')));
+  await assertSucceeds(updateDoc(h(authed(), 'missions', 'x'), { status: 'done', updatedAt: 2 }));
+  await assertFails(updateDoc(h(authed(), 'missions', 'x'), { status: 'paid' }));
+  await assertFails(setDoc(h(authed(), 'missions', 'y1'), { ...mission, to: 'a' }));
+  await assertFails(setDoc(h(authed(), 'missions', 'y2'), { ...mission, gift: 0 }));
+  await assertFails(setDoc(h(authed(), 'missions', 'y3'), { ...mission, title: 'x'.repeat(61) }));
+  await assertFails(setDoc(h(authed(), 'missions', 'y4'), { ...mission, title: '' }));
+  await assertFails(setDoc(h(authed(), 'missions', 'y5'), { ...mission, extra: 1 }));
+  await assertFails(deleteDoc(h(authed(), 'missions', 'x')));
+  await assertFails(getDoc(h(anon(), 'missions', 'x')));
+});
+
+test('approving a mission twice fails because the gift entries already exist', async () => {
+  const db = authed();
+  await assertSucceeds(setDoc(h(db, 'missions', 'x'), { ...mission, status: 'done' }));
+  const approve = () => {
+    const batch = writeBatch(db);
+    batch.update(h(db, 'missions', 'x'), { status: 'approved', updatedAt: 3 });
+    batch.set(h(db, 'money', 'gift-out-x'), { ...purchase, budgetId: 'personal-a', by: 'a', kind: 'giftOut', label: mission.title });
+    batch.set(h(db, 'money', 'gift-in-x'), { ...purchase, budgetId: 'personal-b', by: 'a', kind: 'giftIn', label: mission.title });
+    return batch.commit();
+  };
+  await assertSucceeds(approve());
+  await assertFails(approve());
+});
+
+test('bills: owner a/b, name ≤ 40, whole pence ≥ 1, archivable, not deletable', async () => {
+  await assertSucceeds(setDoc(h(authed(), 'bills', 'b1'), bill));
+  await assertSucceeds(updateDoc(h(authed(), 'bills', 'b1'), { archivedAt: 5 }));
+  await assertFails(setDoc(h(authed(), 'bills', 'b2'), { ...bill, owner: 'shared' }));
+  await assertFails(setDoc(h(authed(), 'bills', 'b3'), { ...bill, amount: 0 }));
+  await assertFails(setDoc(h(authed(), 'bills', 'b4'), { ...bill, amount: 9.99 }));
+  await assertFails(setDoc(h(authed(), 'bills', 'b5'), { ...bill, name: 'x'.repeat(41) }));
+  await assertFails(deleteDoc(h(authed(), 'bills', 'b1')));
+});

@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { ensureSignedIn, getDb } from './app';
 import { track } from './pending';
-import type { Budget, Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, MoneyEntry, MoneyKind, MoneySettings, Multiplier, Percent } from '../domain/types';
+import type { Bill, Budget, Chore, ChoreLog, Completion, Feedback, FeedbackKind, MemberId, Members, Mission, MissionStatus, MoneyEntry, MoneyKind, MoneySettings, Multiplier, Percent } from '../domain/types';
 import { other } from '../domain/types';
 import { legacyHoursFor } from '../domain/blocks';
 import { planLogWrites, stalePaths, type Backup } from '../domain/backup';
@@ -15,6 +15,8 @@ const choresCol = (db: Firestore, code: string) => collection(db, 'households', 
 const weekDoc = (db: Firestore, code: string, weekId: string) => doc(db, 'households', code, 'weeks', weekId);
 const budgetsCol = (db: Firestore, code: string) => collection(db, 'households', code, 'budgets');
 const moneyCol = (db: Firestore, code: string) => collection(db, 'households', code, 'money');
+const missionsCol = (db: Firestore, code: string) => collection(db, 'households', code, 'missions');
+const billsCol = (db: Firestore, code: string) => collection(db, 'households', code, 'bills');
 const settingsDoc = (db: Firestore, code: string) => doc(db, 'households', code, 'settings', 'app');
 const newId = () => crypto.randomUUID();
 
@@ -147,6 +149,58 @@ export async function deleteMoneyEntry(code: string, id: string) {
   await track(deleteDoc(doc(moneyCol(getDb(), code), id)));
 }
 
+export async function addMission(code: string, input: { from: MemberId; title: string; gift: number }) {
+  await ensureSignedIn();
+  const now = Date.now();
+  await track(setDoc(doc(missionsCol(getDb(), code), newId()), {
+    from: input.from, to: other(input.from), title: Array.from(input.title.trim()).slice(0, 60).join(''), gift: input.gift,
+    status: 'open', createdAt: now, updatedAt: now,
+  }));
+}
+
+export async function setMissionStatus(code: string, id: string, status: Exclude<MissionStatus, 'approved'>) {
+  await ensureSignedIn();
+  await track(updateDoc(doc(missionsCol(getDb(), code), id), { status, updatedAt: Date.now() }));
+}
+
+/**
+ * One batch: the mission becomes approved and the gift moves between the two personal allowances.
+ * The entries have fixed ids and are create-only, so a second approval fails instead of paying twice.
+ */
+export async function approveMission(code: string, mission: Pick<Mission, 'id' | 'from' | 'to' | 'title' | 'gift'>, day: string) {
+  await ensureSignedIn();
+  const db = getDb();
+  const now = Date.now();
+  const label = Array.from(mission.title).slice(0, 40).join('');
+  const entry = (budgetId: string, kind: MoneyKind) => ({ budgetId, by: mission.from, day, amount: mission.gift, label, kind, createdAt: now });
+  const batch = writeBatch(db);
+  batch.update(doc(missionsCol(db, code), mission.id), { status: 'approved', updatedAt: now });
+  batch.set(doc(moneyCol(db, code), `gift-out-${mission.id}`), entry(`personal-${mission.from}`, 'giftOut'));
+  batch.set(doc(moneyCol(db, code), `gift-in-${mission.id}`), entry(`personal-${mission.to}`, 'giftIn'));
+  await track(batch.commit());
+}
+
+export async function addBill(code: string, input: { owner: MemberId; name: string; amount: number }) {
+  await ensureSignedIn();
+  await track(setDoc(doc(billsCol(getDb(), code), newId()), {
+    owner: input.owner, name: Array.from(input.name.trim()).slice(0, 40).join(''), amount: input.amount, createdAt: Date.now(), archivedAt: null,
+  }));
+}
+
+export async function archiveBill(code: string, id: string) {
+  await ensureSignedIn();
+  await track(updateDoc(doc(billsCol(getDb(), code), id), { archivedAt: Date.now() }));
+}
+
+export const toMission = (id: string, d: Record<string, unknown>): Mission => ({
+  id, from: d.from as MemberId, to: d.to as MemberId, title: d.title as string, gift: d.gift as number,
+  status: d.status as MissionStatus, createdAt: d.createdAt as number, updatedAt: d.updatedAt as number,
+});
+export const toBill = (id: string, d: Record<string, unknown>): Bill => ({
+  id, owner: d.owner as MemberId, name: d.name as string, amount: d.amount as number, createdAt: d.createdAt as number,
+  archivedAt: (d.archivedAt as number | null) ?? null,
+});
+
 export const toBudget = (id: string, d: Record<string, unknown>): Budget => ({
   id, name: d.name as string, owner: d.owner as Budget['owner'], monthlyAmount: d.monthlyAmount as number,
   penalty: Boolean(d.penalty), order: (d.order as number) ?? 0, createdAt: d.createdAt as number,
@@ -210,6 +264,14 @@ export async function exportHousehold(code: string): Promise<Backup> {
       budgets: bd.docs.map((d) => toBudget(d.id, d.data())),
       entries: md.docs.map((d) => toMoneyEntry(d.id, d.data())),
     };
+    // Missions and bills arrived later: rules from before them deny the read, so the rest of Pocket Money still exports.
+    try {
+      const [mi, bi] = await Promise.all([getDocsFromServer(missionsCol(db, code)), getDocsFromServer(billsCol(db, code))]);
+      money.missions = mi.docs.map((d) => toMission(d.id, d.data()));
+      money.bills = bi.docs.map((d) => toBill(d.id, d.data()));
+    } catch (e) {
+      if ((e as { code?: string })?.code !== 'permission-denied') throw e;
+    }
   } catch (e) {
     if ((e as { code?: string })?.code !== 'permission-denied') throw e;
   }
@@ -303,6 +365,15 @@ export async function importHousehold(code: string, backup: Backup): Promise<voi
       const ref = entryRef(e.id);
       if (!entryWrites.has(ref.path)) { keep.add(ref.path); continue; }
       add(ref, { budgetId: e.budgetId, by: e.by, day: e.day, amount: e.amount, label: e.label, kind: e.kind, createdAt: e.createdAt });
+    }
+    // Missions and bills are never deleted (the rules forbid it), so like budgets they are only set, never scanned.
+    for (const m of mo.missions ?? []) {
+      add(doc(missionsCol(db, code), m.id), {
+        from: m.from, to: m.to, title: m.title, gift: m.gift, status: m.status, createdAt: m.createdAt, updatedAt: m.updatedAt,
+      });
+    }
+    for (const b of mo.bills ?? []) {
+      add(doc(billsCol(db, code), b.id), { owner: b.owner, name: b.name, amount: b.amount, createdAt: b.createdAt, archivedAt: b.archivedAt });
     }
   }
 

@@ -10,7 +10,7 @@ import { Home } from './Home';
 
 vi.mock('../firebase/repo', () => ({ addMoneyEntry: vi.fn(async () => {}) }));
 const notSetUp: PocketMoneyCtx = {
-  loading: false, confirmed: true, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [],
+  loading: false, confirmed: true, isSetUp: false, timeZone: 'Europe/London', today: '2026-10-16', budgets: [], entries: [], missions: [], bills: [],
   budgetFor: () => undefined,
 };
 let money: PocketMoneyCtx = notSetUp;
@@ -178,4 +178,25 @@ test('Tidy Together card uses logged minutes when the week has logs', () => {
   ];
   renderHome();
   expect(screen.getByText('You 75% · Tahereh 25%')).toBeInTheDocument();
+});
+
+test('missions waiting for me show a badge on the Money card and open Missions', async () => {
+  // The viewer is Iman (a): one open mission for him and one done mission waiting for his approval.
+  const m = { title: 'Cupboards', gift: 500, createdAt: 1, updatedAt: 1 };
+  money = { ...setUpMoney([]), missions: [
+    { ...m, id: '1', from: 'b', to: 'a', status: 'open' },
+    { ...m, id: '2', from: 'a', to: 'b', status: 'done' },
+    { ...m, id: '3', from: 'a', to: 'b', status: 'open' },
+  ] };
+  const nav = renderHome();
+  const card = screen.getByRole('button', { name: /Pocket Money/ });
+  expect(card).toHaveTextContent('2 missions waiting');
+  await userEvent.click(card);
+  expect(nav).toHaveBeenLastCalledWith({ tab: 'money', moneySection: 'missions' });
+});
+
+test('no badge when nothing waits for me', () => {
+  money = setUpMoney([]);
+  renderHome();
+  expect(screen.getByRole('button', { name: /Pocket Money/ })).not.toHaveTextContent(/waiting/);
 });

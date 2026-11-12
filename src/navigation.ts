@@ -1,7 +1,7 @@
 export type TabId = 'home' | 'chores' | 'money' | 'settings';
 export type ChoresSection = 'week' | 'todo' | 'feedback' | 'setup';
 
-export type MoneySection = 'family' | 'mine' | 'home';
+export type MoneySection = 'family' | 'mine' | 'missions' | 'home';
 
 export interface NavTarget {
   tab: TabId;
@@ -19,5 +19,6 @@ export const CHORES_SECTIONS: { id: ChoresSection; label: string }[] = [
 export const MONEY_SECTIONS: { id: MoneySection; label: string }[] = [
   { id: 'family', label: 'Family' },
   { id: 'mine', label: 'Mine' },
+  { id: 'missions', label: 'Missions' },
   { id: 'home', label: 'Home pot' },
 ];

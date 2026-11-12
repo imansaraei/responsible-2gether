@@ -5,9 +5,10 @@ import { MoneySetup } from './MoneySetup';
 import { MoneyMine } from './MoneyMine';
 import { MoneyFamily } from './MoneyFamily';
 import { MoneyHomePot } from './MoneyHomePot';
+import { MoneyMissions } from './MoneyMissions';
 
 const SECTION_SCREENS: Record<MoneySection, () => ReactElement | null> = {
-  family: MoneyFamily, mine: MoneyMine, home: MoneyHomePot,
+  family: MoneyFamily, mine: MoneyMine, missions: MoneyMissions, home: MoneyHomePot,
 };
 
 export function MoneyModule({ section, onSection }: { section: MoneySection; onSection(s: MoneySection): void }) {
