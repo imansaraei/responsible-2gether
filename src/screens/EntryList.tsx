@@ -4,7 +4,7 @@ import { BANK_LABEL, formatGBP } from '../domain/money';
 const dayLabel = (day: string) =>
   new Date(day + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
 
-/** Entries grouped by day, newest first. Only the viewer's own entries from today get a delete button. */
+/** Entries grouped by day, newest first. Only the viewer's own entries from today get a delete button; gifts never do. */
 export function EntryList({ entries, today, me, empty, describe, onDelete }: {
   entries: MoneyEntry[]; today: string; me: MemberId; empty: string;
   describe?(e: MoneyEntry): string; onDelete(id: string): void;
@@ -18,13 +18,14 @@ export function EntryList({ entries, today, me, empty, describe, onDelete }: {
           <h3 className="entry-day">{dayLabel(day)}</h3>
           <ul className="cards">
             {entries.filter((e) => e.day === day).sort((x, y) => y.createdAt - x.createdAt).map((e) => {
-              const name = e.kind === 'nothing' ? 'No spending ✓' : e.kind === 'bank' ? BANK_LABEL : (e.label || 'Purchase');
-              const shown = e.kind === 'bank' ? `+${formatGBP(e.amount)}` : formatGBP(e.amount);
+              const gift = e.kind === 'giftIn' || e.kind === 'giftOut';
+              const name = e.kind === 'nothing' ? 'No spending ✓' : e.kind === 'bank' ? BANK_LABEL : gift ? `🎁 ${e.label}` : (e.label || 'Purchase');
+              const shown = e.kind === 'bank' || e.kind === 'giftIn' ? `+${formatGBP(e.amount)}` : e.kind === 'giftOut' ? `−${formatGBP(e.amount)}` : formatGBP(e.amount);
               return (
                 <li key={e.id} className="card entry-row">
                   <span className="entry-label">{describe ? describe(e) : name}</span>
-                  {!describe && e.kind !== 'nothing' && <span className={`entry-amount${e.kind === 'bank' ? ' in' : ''}`}>{shown}</span>}
-                  {e.by === me && e.day === today && (
+                  {!describe && e.kind !== 'nothing' && <span className={`entry-amount${e.kind === 'bank' || e.kind === 'giftIn' ? ' in' : ''}`}>{shown}</span>}
+                  {e.by === me && e.day === today && !gift && (
                     <button className="btn ghost small" aria-label={`Delete ${name} ${shown}`} onClick={() => onDelete(e.id)}>Delete</button>
                   )}
                 </li>

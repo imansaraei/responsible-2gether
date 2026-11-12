@@ -30,3 +30,14 @@ test('shows each person’s Piggy Bank, not the Home pot’s', () => {
   expect(screen.getByText('Piggy Bank £0.00')).toBeInTheDocument();
   expect(screen.getAllByText(/^Piggy Bank/)).toHaveLength(2);
 });
+
+test('shows each person’s bills and allowance + bills total, itemised for both', () => {
+  render(<Providers ctx={money({ bills: [
+    { id: 'b1', owner: 'a', name: 'Phone', amount: 1500, createdAt: 1, archivedAt: null },
+    { id: 'b2', owner: 'b', name: 'Gym', amount: 3000, createdAt: 1, archivedAt: null },
+  ] })}><MoneyFamily /></Providers>);
+  expect(screen.getByText('Bills £15.00 · Total £215.00')).toBeInTheDocument();
+  expect(screen.getByText('Bills £30.00 · Total £280.00')).toBeInTheDocument();
+  expect(screen.getByText('Phone £15.00')).toBeInTheDocument();
+  expect(screen.getByText('Gym £30.00')).toBeInTheDocument();
+});

@@ -208,3 +208,17 @@ textarea { resize: vertical; min-height: 80px; font: inherit; }
 .piggy p { margin: 0; }
 .piggy .btn { min-height: 44px; align-self: flex-start; }
 .entry-row .entry-amount.in { color: var(--accent); }
+
+/* Missions and Bills */
+.badge { display: inline-block; margin-inline-start: 6px; padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: .75rem; font-weight: 700; vertical-align: middle; }
+.mission-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.mission-title { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.mission-row .entry-amount { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.mission-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.mission-actions .btn { flex: 1; min-height: 44px; }
+.bills { display: flex; flex-direction: column; gap: 8px; }
+.bills h2 { margin: 0; }
+.bill-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.bill-row { display: flex; align-items: center; gap: 10px; }
+.bill-row .bill-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.bill-row .entry-amount { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }

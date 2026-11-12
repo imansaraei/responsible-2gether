@@ -8,6 +8,7 @@ const deleteMoneyEntry = vi.fn(async () => {});
 vi.mock('../firebase/repo', () => ({
   addMoneyEntry: (...a: unknown[]) => addMoneyEntry(...(a as [])),
   deleteMoneyEntry: (...a: unknown[]) => deleteMoneyEntry(...(a as [])),
+  addBill: vi.fn(async () => {}), archiveBill: vi.fn(async () => {}),
 }));
 afterEach(() => vi.clearAllMocks());
 const view = (entries = [entry({ id: 'e1' })]) => render(<Providers ctx={money({ entries })}><MoneyMine /></Providers>);
@@ -104,4 +105,22 @@ describe('Piggy Bank', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete From Piggy Bank +£20.00' }));
     expect(deleteMoneyEntry).toHaveBeenCalledWith('c', 'k1');
   });
+});
+
+test('gift entries read 🎁 title with +/− and have no Delete button', () => {
+  view([
+    entry({ id: 'gift-in-m1', by: 'a', amount: 500, label: 'Cupboards', kind: 'giftIn' }),
+    entry({ id: 'gift-out-m2', amount: 300, label: 'Shelf', kind: 'giftOut' }),
+  ]);
+  expect(screen.getByText('🎁 Cupboards')).toBeInTheDocument();
+  expect(screen.getByText('+£5.00')).toHaveClass('entry-amount', 'in');
+  expect(screen.getByText('🎁 Shelf')).toBeInTheDocument();
+  expect(screen.getByText('−£3.00')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /^Delete / })).toBeNull();
+  expect(screen.getByRole('button', { name: 'No spending today' })).toBeInTheDocument();
+});
+
+test('shows the Bills card', () => {
+  view([]);
+  expect(screen.getByRole('region', { name: 'Bills' })).toHaveTextContent('This month: allowance £250.00 + bills £0.00 = £250.00');
 });

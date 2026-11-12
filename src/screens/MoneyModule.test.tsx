@@ -41,8 +41,8 @@ test('renders title, tabs in order and the requested section', () => {
   view('mine');
   expect(screen.getByRole('heading', { name: '👛 Pocket Money' })).toBeInTheDocument();
   const tabs = screen.getAllByRole('tab');
-  expect(tabs.map((t) => t.textContent)).toEqual(['Family', 'Mine', 'Home pot']);
-  expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
+  expect(tabs.map((t) => t.textContent)).toEqual(['Family', 'Mine', 'Missions', 'Home pot']);
+  expect(tabs.map((t) => t.getAttribute('tabindex'))).toEqual(['-1', '0', '-1', '-1']);
   expect(screen.getByText('mine screen')).toBeInTheDocument();
   expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'money-tab-mine');
 });
@@ -53,7 +53,7 @@ test('clicks, arrows, Home and End report sections', async () => {
   expect(onSection).toHaveBeenLastCalledWith('home');
   screen.getByRole('tab', { name: 'Mine' }).focus();
   await userEvent.keyboard('{ArrowRight}');
-  expect(onSection).toHaveBeenLastCalledWith('home');
+  expect(onSection).toHaveBeenLastCalledWith('missions');
   await userEvent.keyboard('{Home}');
   expect(onSection).toHaveBeenLastCalledWith('family');
   await userEvent.keyboard('{End}');
